@@ -9,6 +9,55 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z" fill="currentColor"/></svg>
+        <span class="title">LanternFly Quest</span>
+        <span class="pill">alpha</span>
+      </div>
+      <nav class="nav">
+        <a href="#learn">Learn</a>
+        <a href="#report">Report</a>
+        <a href="#leaderboard">Leaderboard</a>
+      </nav>
+      <div class="auth">
+        <form id="loginForm" class="login-form" autocomplete="off">
+          <input id="loginName" name="username" placeholder="Username" aria-label="Username" />
+          <button type="submit" class="btn">Log in</button>
+        </form>
+        <div id="authed" class="authed hidden">
+          <span id="whoami"></span>
+          <button id="logoutBtn" class="btn secondary">Log out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div>
+          <h1>Turn invasive pests into points.</h1>
+          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches, compete on the leaderboard, and earn badges for real‑world impact.</p>
+          <a href="#report" class="btn cta">Start Reporting</a>
+        </div>
+        <div class="hero-card" aria-hidden="true">
+          <div class="card stat"><span class="stat-label">Total Points</span><span id="statTotalPoints" class="stat-value">0</span></div>
+          <div class="card stat"><span class="stat-label">Your Streak</span><span id="statStreak" class="stat-value">0</span></div>
+          <div class="card stat"><span class="stat-label">Your Catches</span><span id="statCatches" class="stat-value">0</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>LanternFly Quest · v0.1</span>
+      <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
+    </div>
+  </footer>
     
     <!-- g_id_onload contains Google Identity Services settings -->
     <div
