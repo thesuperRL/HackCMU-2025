@@ -3,8 +3,8 @@ from PIL import Image
 import os
 
 # Paths
-RAW_DIR = "data/lanternflies/train/object"
-CROPPED_DIR = "data/lanternflies/cropped_dataset/lanternfly"
+RAW_DIR = "data/lanternflies/valid/object"
+CROPPED_DIR = "data/lanternflies/valid/object"
 
 # Make output directory if not exists
 os.makedirs(CROPPED_DIR, exist_ok=True)
@@ -33,6 +33,7 @@ for filename in os.listdir(RAW_DIR):
         base, ext = os.path.splitext(filename)
         out_path = os.path.join(CROPPED_DIR, f"{base}_obj{i}{ext}")
         cropped.save(out_path)
+        os.remove(img_path)
 
         print(f"Saved {out_path}")
 

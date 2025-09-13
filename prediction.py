@@ -23,14 +23,12 @@ def crop_objects(image_path, conf_thresh=0.5):
         conf = results.boxes.conf[i].item()
         if conf < conf_thresh:
             continue  # skip low-confidence boxes
-
         x1, y1, x2, y2 = map(int, box)
         crop = img[y1:y2, x1:x2]
         plt.imshow(crop)
         plt.title(f"Prediction:")
         plt.axis("off")
         plt.show()
-        print(conf)
         cropped_images.append(crop)  # keep in memory
 
     print(f"Cropped {len(cropped_images)} object(s) (not saved to disk)")
@@ -42,23 +40,22 @@ model = load_model("my_model.h5")
 # Now you can use it directly for predictions
 
 # Example: single image
-crops = crop_objects("/Users/jesseli/Downloads/IMG_4498.jpg", conf_thresh=0.4)
+crops = crop_objects("/Users/jesseli/Downloads/istockphoto-481248302-612x612.jpg", conf_thresh=0.25)
 
 # 2. Iterate over each crop and predict
-for i, crop in enumerate(crops):
-    # Preprocess crop for your classifier (resize, normalize, etc.)
-    # Example for TensorFlow/Keras model expecting 224x224 input:
 
-    # Preprocess crop
-    resized = cv2.resize(crop, (224, 224))
+if(len(crops)==0):
+    result="NO"
+    print(f"Crop: Class {result}")
+else:
+    resized = cv2.resize(crops[0], (224, 224))
     img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
-
-    # Make prediction
+# Make prediction
     pred = model.predict(img_array)
     predicted_class = np.argmax(pred, axis=1)[0]
-    if(predicted_class==0):
+    confidence = pred[0][predicted_class]
+    if(predicted_class==0 and confidence>0.9):
         result="YES"
     else:
         result="NO"
-    confidence = pred[0][predicted_class]
-    print(f"Crop {i}: Class {result} with confidence {confidence:.2f}")
+    print(f"Crop: Class {result} with confidence {confidence:.2f}")

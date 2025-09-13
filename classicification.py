@@ -74,7 +74,7 @@ model.compile(optimizer="adam",
 # ------------------------------------------------------
 # 4. Train
 # ------------------------------------------------------
-history = model.fit(train_ds, validation_data=val_ds, epochs=20)
+history = model.fit(train_ds, validation_data=val_ds, epochs=50)
 
 # ------------------------------------------------------
 # 5. Plot Accuracy and Loss
