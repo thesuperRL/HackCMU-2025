@@ -115,7 +115,7 @@ print(f"Test Accuracy: {test_acc:.2f}")
 
 
 # Path to your image
-img_path = "/Users/jesseli/Downloads/images.jpeg"
+img_path = "/Users/jesseli/Downloads/IMG_4498.jpg"
 # "/Users/jesseli/Downloads/lanternflies/valid/object/2DD59ABE-9EC1-4265-AA16-5C6E2F324371-scaled-e1598437095921_jpeg_jpg.rf.ec9d98b39787df70e926e31e0be91532.jpg"
 # Load the image with target size matching your model input
 img = image.load_img(img_path, target_size=(224, 224))
@@ -148,3 +148,6 @@ for fname in os.listdir(test_folder)[:5]:  # first 5 images
     plt.title(f"{fname} → {pred_label} ({pred_prob:.2f})")
     plt.axis("off")
     plt.show()
+
+# model is your trained Keras model
+model.save("my_model.h5")  # saves entire model: architecture + weights + optimizer
