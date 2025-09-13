@@ -98,16 +98,6 @@
             style="display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0"
           >
             <!-- Hidden file input, visible trigger button -->
-            <label class="btn">
-              <input
-                id="fileInput"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style="display: none"
-              />
-              Upload Photo
-            </label>
 
             <button id="openCam" class="btn" type="button">
               <i class="bi bi-camera-video"></i> Take Picture
@@ -290,8 +280,8 @@
       }
       loadExistingCSV();
 
-      // Upload flow (native camera on mobile)
-      fileInput.addEventListener("change", async () => {
+      /*// Upload flow (native camera on mobile)
+        fileInput.addEventListener("change", async () => {
         const file = fileInput.files && fileInput.files[0];
         if (!file) return;
         imgDataUrl = await readFileAsDataURL(file);
@@ -299,8 +289,31 @@
         preview.style.display = "block";
         setStatus("Photo selected. You can Confirm to add it.");
         enableConfirmIfReady();
-      });
+      });*/
+      fileInput.addEventListener("change", (event) => {
+    const file = event.target.files[0]; // get the first selected file
 
+    if (file) {
+      // Create an image element
+      const img = document.createElement("img");
+
+      // Generate a local temporary URL for the file
+      img.src = URL.createObjectURL(file);
+
+      // Optional styling for clarity
+      img.style.maxWidth = "300px";
+      img.style.marginTop = "10px";
+      img.style.borderRadius = "10px";
+
+      // Clear any previous preview
+      preview.innerHTML = "";
+
+      // Add new image to the page
+      preview.appendChild(img);
+    }
+  });
+
+      const input = document.getElementById("fileInput");
       // In-page camera
       openBtn.addEventListener("click", async () => {
         try {
