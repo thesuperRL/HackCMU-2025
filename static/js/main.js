@@ -165,8 +165,6 @@ document.getElementById("logoutMenuBtn").addEventListener("click", () => {
 
 // MAP ==============================
 
-const CSV_URL = "static/data/lanternflydata.csv";
-
 const showMapError = (msg) => {
   const el = document.getElementById("mapError");
   el.textContent = msg;
@@ -211,27 +209,44 @@ var clusters = L.markerClusterGroup({
   },
 });
 
+async function getScores() {
+  try {
+    const response = await fetch("/leaderboard-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request" }),
+    });
+    const data = await response.json();
+    console.log("Status:", data);
+    return data; // This will return the actual data
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    return []; // Return empty array on error
+  }
+}
+
 (async () => {
   try {
-    const res = await fetch(CSV_URL, { cache: "no-cache" });
-    if (!res.ok) throw new Error(`CSV HTTP ${res.status}`);
-    const csvString = await res.text();
-
-    const parsed = Papa.parse(csvString, { header: true, dynamicTyping: true });
-    const data = parsed.data || [];
+    const response = await fetch("/locations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request" }),
+    });
+    const data = await response.json();
+    console.log("Status:", data);
 
     for (var i = 0; i < data.length; i++) {
       var row = data[i];
-      if (!row || !row.Latitude || !row.Longitude) continue;
+      if (!row || !row.latitude || !row.longitude) continue;
 
-      var popupContent = `<b>${row.Name || "Sighting"}</b><br>`;
-      if (row.Date) popupContent += `<i>${row.Date}</i><br>`;
-      if (row.Image)
-        popupContent += `<img src="${row.Image}" alt="${
-          row.Name || "Lanternfly"
+      var popupContent = `<b>${row.name || "Sighting"}</b><br>`;
+      if (row.date) popupContent += `<i>${row.date}</i><br>`;
+      if (row.image_link)
+        popupContent += `<img src="${row.image_link}" alt="${
+          row.name || "Lanternfly"
         }" width="120" />`;
 
-      var marker = L.marker([row.Latitude, row.Longitude], {
+      var marker = L.marker([row.latitude, row.longitude], {
         opacity: 1,
       }).bindPopup(popupContent);
       clusters.addLayer(marker);
@@ -244,9 +259,7 @@ var clusters = L.markerClusterGroup({
       if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
     }
   } catch (err) {
-    console.error("Error loading CSV:", err);
-    showMapError(
-      "Could not load data. Check CSV path and that you’re serving over http(s)."
-    );
+    console.error("Error loading SQL:", err);
+    showMapError("Could not load data. Check SQL.");
   }
 })();
