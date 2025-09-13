@@ -148,8 +148,15 @@ confirmBtn.addEventListener("click", async () => {
   .then(res => res.json())
   .then(data => {
     alert(`Prediction: Class ${data.class}, Confidence: ${(data.confidence * 100).toFixed(2)}%`);
-  })
-  .catch(err => console.error(err));
+  }).catch(err => console.error(err));
+  if(data.class==1) {
+    alert("Lanternfly photos only!");
+    return;
+  }
+  else if(data.confidence<0.9) {
+    alert("Make the picture more clear!");
+    return;
+  }
 
 
   // Test mode: skip verification, always submit
