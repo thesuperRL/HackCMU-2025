@@ -231,9 +231,11 @@ def submit_report():
             date = raw_ts,
             uid = uid,
         )
+        update_stmt = update(accounts).where(accounts.c.google_uid == uid).values(count=accounts.c.count + 1)
 
         with engine.begin() as conn:
             conn.execute(insert_stmt)
+            conn.execute(update_stmt)
             print(f"Inserted row {index} with name: {name}")
 
         return jsonify({"status": "ok"})
