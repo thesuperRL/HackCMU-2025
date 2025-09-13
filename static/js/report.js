@@ -113,6 +113,12 @@ snapBtn.addEventListener("click", () => {
   setStatus("Snapshot captured.");
   verifyMsg.textContent = "";
   enableConfirm();
+  stream.getTracks().forEach((t) => t.stop());
+  stream = null;
+  video.srcObject = null;
+  video.style.display = "none";
+  snapBtn.disabled = true;
+  closeBtn.disabled = true;
 });
 closeBtn.addEventListener("click", () => {
   if (stream) {

@@ -344,6 +344,27 @@ function initMapIfPresent() {
     },
   });
 
+  function hexDumpToDataUrl(hexDump) {
+    // Remove the "\x" parts and join into a continuous hex string
+    const hexStr = hexDump.replace(/\\x/g, "");
+
+    // Convert hex string → byte array
+    const bytes = new Uint8Array(hexStr.length / 2);
+    for (let i = 0; i < hexStr.length; i += 2) {
+      bytes[i / 2] = parseInt(hexStr.substr(i, 2), 16);
+    }
+
+    // Convert bytes → binary string
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+
+    // Encode as base64 and return Data URL
+    const base64 = btoa(binary);
+    return `data:image/jpeg;base64,${base64}`;
+  }
+
   function addRows(rows) {
     // Rebuild markers each time based on fresh table data
     try {
@@ -406,9 +427,12 @@ function initMapIfPresent() {
       const date = norm["date"] ?? norm["timestampiso"] ?? norm["timestamp"];
       const dateStr = prettyDate(date);
       if (dateStr) popup += `<i>${dateStr}</i><br>`;
-      const img = norm["image_link"] ?? norm["imagedataurl"] ?? norm["image"];
-      if (img)
+      const img = hexDumpToDataUrl(norm["image_bytes"]);
+      console.log(norm["image_bytes"].substr(1, norm["image_bytes"].length));
+      if (img) {
+        console.log(img);
         popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
+      }
       // Choose icon: default Leaflet pin for most; a blue SVG pin for current user's pins
       const rowNameLc = (norm["name"] || "").toLowerCase();
       const rowEmailLc = (norm["email"] || "").trim().toLowerCase();
