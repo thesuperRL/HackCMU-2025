@@ -7,6 +7,7 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras import layers
+import os
 
 
 
@@ -19,21 +20,21 @@ BATCH_SIZE = 32
 
 
 train_ds = tf.keras.utils.image_dataset_from_directory(
-    '/Users/jesseli/Downloads/lanternflies/train',
+    './data/lanternflies/train',
     label_mode="binary",
     image_size=(224,224),
     batch_size=32
 )
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
-    '/Users/jesseli/Downloads/lanternflies/valid',
+    './data/lanternflies/valid',
     label_mode="binary",
     image_size=(224,224),
     batch_size=32
 )
 
 test_ds = tf.keras.utils.image_dataset_from_directory(
-    '/Users/jesseli/Downloads/lanternflies/test',
+    './data/lanternflies/test',
     label_mode="binary",
     image_size=(224,224),
     batch_size=32
@@ -114,8 +115,8 @@ print(f"Test Accuracy: {test_acc:.2f}")
 
 
 # Path to your image
-img_path = "/Users/jesseli/Downloads/lanternflies/valid/object/2DD59ABE-9EC1-4265-AA16-5C6E2F324371-scaled-e1598437095921_jpeg_jpg.rf.ec9d98b39787df70e926e31e0be91532.jpg"
-
+img_path = "/Users/jesseli/Downloads/images.jpeg"
+# "/Users/jesseli/Downloads/lanternflies/valid/object/2DD59ABE-9EC1-4265-AA16-5C6E2F324371-scaled-e1598437095921_jpeg_jpg.rf.ec9d98b39787df70e926e31e0be91532.jpg"
 # Load the image with target size matching your model input
 img = image.load_img(img_path, target_size=(224, 224))
 
@@ -132,3 +133,18 @@ plt.imshow(img)
 plt.title(f"Prediction: {pred_label} ({pred_prob:.2f})")
 plt.axis("off")
 plt.show()
+
+test_folder = "/Users/jesseli/Downloads/predictions"
+for fname in os.listdir(test_folder)[:5]:  # first 5 images
+    img_path = os.path.join(test_folder, fname)
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    pred_prob = model.predict(img_array)[0][0]
+    pred_label = "Object" if pred_prob > 0.5 else "No Object"
+    
+    plt.imshow(img)
+    plt.title(f"{fname} → {pred_label} ({pred_prob:.2f})")
+    plt.axis("off")
+    plt.show()

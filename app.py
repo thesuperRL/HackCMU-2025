@@ -77,12 +77,12 @@ def receive_data():
 
     with engine.begin() as conn:
         conn.execute(insert_stmt)
-        print(f"Created new user with email: {account_json.get("email")}")
+        print(f"Created new user with email: {account_json.get('email')}")
 
     # Return something back to JS
     return jsonify({
         "status": "success",
-        "py_variable": f"Hello {account_json.get("name")}, your email is {account_json.get("email")}"
+        "py_variable": f"Hello {account_json.get('name')}, your email is {account_json.get('email')}"
     })
 
 
