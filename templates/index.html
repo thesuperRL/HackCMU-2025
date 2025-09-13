@@ -35,13 +35,19 @@
       </nav>
         <div class="auth">
           <form id="loginForm" class="login-form" autocomplete="off">
-            <input
-              id="loginName"
-              name="username"
-              placeholder="Username"
-              aria-label="Username"
-            />
-            <button type="submit" class="btn">Log in</button>
+            <!-- g_id_onload contains Google Identity Services settings -->
+            <div
+              id="g_id_onload"
+              data-auto_prompt="false"
+              data-callback="handleCredentialResponse"
+              data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com"
+            ></div>
+            <!-- g_id_signin places the button on a page and supports customization -->
+            <div 
+              class="g_id_signin"
+              data-theme="filled_blue"
+              data-text="signup_with"
+            ></div>
           </form>
           <div id="authed" class="authed hidden">
             <span id="whoami"></span>
