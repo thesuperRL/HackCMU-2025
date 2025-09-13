@@ -212,14 +212,14 @@ def submit_report():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
     
-def crop_objects(file, conf_thresh=0.5):
+def crop_objects(img, conf_thresh=0.5):
     """
     Returns cropped objects as a list of NumPy arrays (in memory)
     """
     model1 = YOLO("yolov5s.pt")   
-    file_bytes = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    results = model1.predict(img)[0]  
+    resized = cv2.resize(img, (224, 224))
+    img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
+    results = model1.predict(img_array)[0]  
 
     cropped_images = []
     for i, box in enumerate(results.boxes.xyxy):
@@ -228,23 +228,27 @@ def crop_objects(file, conf_thresh=0.5):
             continue  # skip low-confidence boxes
         x1, y1, x2, y2 = map(int, box)
         crop = img[y1:y2, x1:x2]
-        cropped_images.append(crop)  # keep in memory
+        return crop
 
-    return cropped_images
+    return img
 # Load your trained model once at startup
 model = load_model("my_model.h5")
+
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
+    if "imageData" not in data:
+        return jsonify({"error": "No image data provided"}), 400
     img_data = data["imageData"].split(",")[1]  # remove 'data:image/jpeg;base64,' prefix
     img_bytes = base64.b64decode(img_data)
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # img = crop_objects(img, conf_thresh=0.4)
     resized = cv2.resize(img, (224, 224))
     img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
     # Make prediction
     pred = model.predict(img_array)
-    predicted_class = np.argmax(pred, axis=1)[0]
+    predicted_class = int(np.argmax(pred, axis=1)[0])
     confidence = float(pred[0][predicted_class])
     return jsonify({ "class": predicted_class, "confidence": confidence})
 if __name__ == "__main__":

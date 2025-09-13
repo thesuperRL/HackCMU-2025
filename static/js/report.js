@@ -141,25 +141,27 @@ confirmBtn.addEventListener("click", async () => {
   // const formData = new FormData();
   // formData.append("file", imgDataUrl);
 
-  fetch("/predict", {
+  try {
+  const res = await fetch("/predict", {
     method: "POST",
-    body: JSON.stringify({imageData: imgDataUrl})
-  })
-  .then(res => res.json())
-  .then(data => {
-    alert(`Prediction: Class ${data.class}, Confidence: ${(data.confidence * 100).toFixed(2)}%`);
-  }).catch(err => {alert(imgDataUrl)});
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageData: imgDataUrl })
+  });
 
-  /* 
-  if(data.class==1) {
+  const json1 = await res.json();
+
+  if(json1.class==1) {
     alert("Lanternfly photos only!");
     return;
   }
-  else if(data.confidence<0.9) {
+  else if(json1.confidence<0.9) {
     alert("Make the picture more clear!");
     return;
   }
-  */
+  } catch (err) {
+  console.error(err);
+  alert("Something went wrong while sending the image to the server.");
+}
 
 
   // Test mode: skip verification, always submit
