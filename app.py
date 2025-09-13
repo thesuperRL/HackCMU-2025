@@ -1,0 +1,44 @@
+from flask import Flask, request, jsonify, render_template
+import os
+
+from sqlalchemy import create_engine, text, select, insert, update, MetaData, Table, exists
+from sqlalchemy.orm import sessionmaker
+
+app = Flask(__name__)
+
+DATABASE_URL = "postgresql+psycopg2://postgres:1234@localhost:5432/postgres"
+engine = create_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+metadata = MetaData()
+
+accounts = Table("user", metadata, autoload_with=engine)
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/send", methods=["POST"])
+def receive_data():
+    data = request.get_json()
+    account_json = data.get("account_json")  # variable sent from JS
+    print(f"Received from JS: {account_json}")
+
+    insert_stmt = insert(accounts).values(
+        google_name=account_json.get("name"),
+        google_email=account_json.get("email"),
+        google_uid=account_json.get("id"),
+    )
+
+    with engine.begin() as conn:
+        conn.execute(insert_stmt)
+        print(f"Created new user with email: {account_json.get("email")}")
+
+    # Return something back to JS
+    return jsonify({
+        "status": "success",
+        "py_variable": f"Hello {account_json.get("name")}, your email is {account_json.get("email")}"
+    })
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
