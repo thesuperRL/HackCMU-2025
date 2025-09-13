@@ -4,3 +4,6 @@ psycopg2-binary
 pillow
 numpy
 tensorflow
+opencv-python
+ultralytics
+matplotlib
