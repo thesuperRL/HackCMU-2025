@@ -60,5 +60,26 @@ def receive_data():
     })
 
 
+@app.route("/leaderboard-data", methods=["POST"])
+def give_leaderboard_data():
+    data = request.get_json()
+    account_json = data.get("account_json")  # variable sent from JS
+    print(f"Received from JS: {account_json}")
+
+    leaderboardData = []
+
+    query = select(accounts)
+
+    with engine.begin() as conn:
+        conn.execute(query)
+        for row in conn.execute(query)  :
+            leaderboardData.append({
+                "username": row.google_name,
+                "catches": row.count,
+            })
+
+    # Return something back to JS
+    return jsonify(leaderboardData)
+
 if __name__ == "__main__":
     app.run(debug=True)
