@@ -150,7 +150,6 @@ confirmBtn.addEventListener("click", async () => {
     alert(`Prediction: Class ${data.class}, Confidence: ${(data.confidence * 100).toFixed(2)}%`);
   })
   .catch(err => console.error(err));
-  });
 
 
   // Test mode: skip verification, always submit
