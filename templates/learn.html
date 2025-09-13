@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Info · LanternFly Quest</title>
+
+    <!-- Icons & site styles (match index) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="../css/style.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="site-header">
+        <div class="container header-inner">
+            <div class="brand">
+                <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
+                        fill="currentColor" />
+                </svg>
+                <span class="title">LanternFly Quest</span>
+                <span class="pill">alpha</span>
+            </div>
+
+            <nav class="nav">
+                <a href="./info.html" class="active">Info</a>
+                <a href="./learn.html">Learn</a>
+                <a href="./report.html">Report</a>
+                <a href="./leaderboard.html">Leaderboard</a>
+            </nav>
+
+            <div class="auth">
+                <form id="loginForm" class="login-form" autocomplete="off">
+                    <input id="loginName" name="username" placeholder="Username" aria-label="Username" />
+                    <button type="submit" class="btn">Log in</button>
+                </form>
+                <div id="authed" class="authed hidden">
+                    <span id="whoami"></span>
+                    <button id="logoutBtn" class="btn secondary">Log out</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <main>
+        <section class="hero">
+            <div class="container hero-inner">
+                <div>
+                    <h1>Spotted Lanternflies: Why It Matters</h1>
+                    <p class="lead">
+                        Learn why spotted lanternflies are harmful, what you can do today, and how <strong>LanternFly
+                            Quest</strong> turns action into impact.
+                    </p>
+                    <a href="report.html" class="btn cta">Report a Catch</a>
+                </div>
+
+                <div class="hero-card" aria-hidden="true">
+                    <div class="card stat">
+                        <i class="bi bi-bug"></i>
+                        <span class="stat-label">Species</span>
+                        <span class="stat-value">L. delicatula</span>
+                    </div>
+                    <div class="card stat">
+                        <i class="bi bi-geo-alt"></i>
+                        <span class="stat-label">Spread</span>
+                        <span class="stat-value">Rapid</span>
+                    </div>
+                    <div class="card stat">
+                        <i class="bi bi-tree"></i>
+                        <span class="stat-label">Hosts</span>
+                        <span class="stat-value">70+ plants</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content -->
+        <section class="container content">
+            <h2><i class="bi bi-bug"></i> What Are Spotted Lanternflies?</h2>
+            <p>
+                The spotted lanternfly (<em>Lycorma delicatula</em>) is an invasive planthopper native to Asia.
+                It feeds on plant sap and can harm grapes, apples, hops, and hardwoods. Its distinctive gray
+                wings with black spots and bright red underwings make it easy to recognize.
+            </p>
+
+            <h2><i class="bi bi-exclamation-triangle"></i> Why Are They Bad?</h2>
+            <ul>
+                <li><strong>Agriculture risk:</strong> Damages vineyards, orchards, and timber industries.</li>
+                <li><strong>Tree stress:</strong> Heavy feeding weakens plants and invites disease.</li>
+                <li><strong>Honeydew & mold:</strong> Excretions promote sooty mold that harms plants and surfaces.</li>
+                <li><strong>Hitchhiking eggs:</strong> Egg masses stick to cars, firewood, and gear, accelerating
+                    spread.</li>
+            </ul>
+
+            <h2><i class="bi bi-check-circle"></i> What You Can Do</h2>
+            <ul>
+                <li><strong>Report & remove:</strong> Stomp nymphs/adults. Scrape egg masses into alcohol/hand
+                    sanitizer.</li>
+                <li><strong>Inspect before travel:</strong> Check vehicles, outdoor equipment, and firewood.</li>
+                <li><strong>Share knowledge:</strong> Teach neighbors and friends how to identify lanternflies.</li>
+                <li><strong>Log catches:</strong> Use the <em>Report</em> page to add a photo and location to the map.
+                </li>
+            </ul>
+
+            <h2><i class="bi bi-trophy"></i> Purpose of LanternFly Quest</h2>
+            <p>
+                We turn invasive species control into a shared challenge:
+            </p>
+            <ul>
+                <li><strong>Citizen science:</strong> Community reports help track infestations in real time.</li>
+                <li><strong>Gamified action:</strong> Earn points, build streaks, and climb the leaderboard.</li>
+                <li><strong>Collective impact:</strong> Thousands of small actions add up to real ecological protection.
+                </li>
+            </ul>
+
+            <div class="card" style="padding:16px; margin-top:16px;">
+                <h3 style="margin-top:0"><i class="bi bi-lightbulb"></i> Quick ID Tips</h3>
+                <ul>
+                    <li>Adults: gray wings with black spots; red underwings when flying.</li>
+                    <li>Nymphs: black with white spots (early), then red/black with white spots (late).</li>
+                    <li>Egg masses: muddy, putty-like smears on trees, vehicles, stones, and outdoor items.</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <span>LanternFly Quest · v0.1</span>
+            <a href="../index.html" class="btn small">Back to Home</a>
+        </div>
+    </footer>
+
+    <!-- Scripts (match index) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <script src="../static/js/main.js"></script>
+</body>
+
+</html>
