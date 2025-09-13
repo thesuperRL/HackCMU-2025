@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lanternfly — Photo + Location → CSV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    button { padding: 10px 14px; font-weight: 600; }
+    input[type=file] { display: none; }
+    #video { max-width: 100%; border-radius: 8px; display: none; }
+    #preview { max-width: 100%; border-radius: 8px; display: none; margin-top: 8px; }
+    #status { margin-top: 8px; color: #555; }
+    .muted { color:#666; font-size: 13px; }
+    .field { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h2>Report a Lanternfly — Photo + Location</h2>
+
+  <div class="field">
+    <label>Name (optional)</label><br>
+    <input id="nameInput" type="text" placeholder="Your name" style="width: 300px; max-width: 100%;">
+  </div>
+
+  <div class="row">
+    <!-- Upload from device -->
+    <label>
+      <input id="fileInput" type="file" accept="image/*" capture="environment">
+      <button type="button">Upload Photo</button>
+    </label>
+
+    <!-- Open camera in-page (desktop & mobile) -->
+    <button id="openCam" type="button">Take Picture</button>
+    <button id="snap" type="button" disabled>Snap</button>
+    <button id="closeCam" type="button" disabled>Close Camera</button>
+
+    <!-- Confirm + build CSV row -->
+    <button id="confirm" type="button" disabled>Confirm Picture & Add to CSV</button>
+  </div>
+
+  <div class="muted">
+    Tip: “Upload Photo” opens the native camera on phones. “Take Picture” opens the camera inside this page (requires HTTPS or localhost).
+  </div>
+
+  <!-- Camera preview -->
+  <video id="video" autoplay playsinline></video>
+  <img id="preview" alt="preview">
+
+  <div id="status"></div>
+
+  <div class="row" style="margin-top:12px">
+    <button id="downloadCSV" type="button" disabled>Download Updated CSV</button>
+  </div>
+
+  <!-- hidden canvas for snapshots -->
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <script>
+    // --- Config: define CSV columns and (optional) existing CSV path ---
+    const CSV_COLUMNS = ["Name","Latitude","Longitude","AccuracyMeters","TimestampISO","ImageDataURL"];
+    const EXISTING_CSV_URL = ""; // e.g., "lanternflydata.csv" if you want to load & append
+
+    // State
+    let rows = [];              // collected rows to export
+    let imgDataUrl = null;      // currently selected/captured image
+    let stream = null;          // MediaStream for camera
+
+    // Elements
+    const nameInput = document.getElementById('nameInput');
+    const fileInput = document.getElementById('fileInput');
+    const openBtn   = document.getElementById('openCam');
+    const snapBtn   = document.getElementById('snap');
+    const closeBtn  = document.getElementById('closeCam');
+    const confirmBtn= document.getElementById('confirm');
+    const downloadBtn = document.getElementById('downloadCSV');
+    const video     = document.getElementById('video');
+    const preview   = document.getElementById('preview');
+    const canvas    = document.getElementById('canvas');
+    const statusEl  = document.getElementById('status');
+
+    // Helpers
+    function setStatus(msg) { statusEl.textContent = msg; }
+    function enableConfirmIfReady() {
+      confirmBtn.disabled = !imgDataUrl;
+    }
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+    function getCurrentPosition(options = { enableHighAccuracy: true, timeout: 12000 }) {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('Geolocation not supported'));
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    }
+    function toCSVLine(values) {
+      // minimal CSV escape
+      return values.map(v => {
+        const s = (v == null ? "" : String(v));
+        if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }).join(',');
+    }
+    function makeCSVBlob() {
+      const header = toCSVLine(CSV_COLUMNS);
+      const lines = rows.map(r => toCSVLine(CSV_COLUMNS.map(c => r[c])));
+      const csv = [header, ...lines].join('\n');
+      return new Blob([csv], { type: 'text/csv' });
+    }
+
+    // Optional: load existing CSV and keep those rows so you can append
+    async function loadExistingCSV() {
+      if (!EXISTING_CSV_URL) return;
+      try {
+        const res = await fetch(EXISTING_CSV_URL);
+        if (!res.ok) throw new Error('Failed to load existing CSV');
+        const text = await res.text();
+        const lines = text.trim().split(/\r?\n/);
+        if (!lines.length) return;
+        const header = lines.shift().split(',');
+        // basic header->index map
+        const idx = {};
+        header.forEach((h,i)=> idx[h.trim()] = i);
+        lines.forEach(line => {
+          if (!line) return;
+          const parts = [];
+          // simple CSV split that handles quotes
+          let cur = '', inQ = false;
+          for (let i=0;i<line.length;i++){
+            const ch=line[i];
+            if (ch === '"'){ 
+              if (inQ && line[i+1] === '"'){ cur+='"'; i++; }
+              else inQ=!inQ;
+            } else if (ch === ',' && !inQ){ parts.push(cur); cur=''; }
+            else { cur+=ch; }
+          }
+          parts.push(cur);
+          const row = {};
+          CSV_COLUMNS.forEach(col=>{
+            row[col] = parts[idx[col]] ?? "";
+          });
+          rows.push(row);
+        });
+        setStatus(`Loaded ${rows.length} existing row(s).`);
+        downloadBtn.disabled = rows.length === 0;
+      } catch (e) {
+        console.warn(e);
+        setStatus('Could not load existing CSV; will start a new one.');
+      }
+    }
+    loadExistingCSV();
+
+    // Upload flow (native camera on mobile)
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      imgDataUrl = await readFileAsDataURL(file);
+      preview.src = imgDataUrl;
+      preview.style.display = 'block';
+      setStatus('Photo selected. You can Confirm to add it.');
+      enableConfirmIfReady();
+    });
+
+    // In-page camera
+    openBtn.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        snapBtn.disabled = false;
+        closeBtn.disabled = false;
+        setStatus('Camera open. Click Snap to capture.');
+      } catch (err) {
+        alert('Could not open camera: ' + (err.message || err));
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      video.style.display = 'none';
+      snapBtn.disabled = true;
+      closeBtn.disabled = true;
+      setStatus('Camera closed.');
+    });
+
+    snapBtn.addEventListener('click', () => {
+      if (!stream) return;
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings ? track.getSettings() : {};
+      const w = settings.width || video.videoWidth || 1280;
+      const h = settings.height || video.videoHeight || 720;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, w, h);
+      imgDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      preview.src = imgDataUrl;
+      preview.style.display = 'block';
+      setStatus('Snapshot captured. You can Confirm to add it.');
+      enableConfirmIfReady();
+    });
+
+    // Confirm → get location → build CSV row
+    confirmBtn.addEventListener('click', async () => {
+      if (!imgDataUrl) { alert('Please select or take a photo first.'); return; }
+      setStatus('Getting location…');
+      try {
+        const pos = await getCurrentPosition();
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const acc = pos.coords.accuracy;
+        const when = new Date().toISOString();
+        const name = (nameInput.value || '').trim();
+
+        const row = {
+          "Name": name,
+          "Latitude": lat,
+          "Longitude": lng,
+          "AccuracyMeters": acc,
+          "TimestampISO": when,
+          "ImageDataURL": imgDataUrl
+        };
+        rows.push(row);
+        setStatus(`Added row ${rows.length}. You can Download Updated CSV now.`);
+        downloadBtn.disabled = false;
+
+        // OPTIONAL: send to your backend instead of (or in addition to) download.
+        // Example: POST JSON to /api/report
+        /*
+        await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row)
+        });
+        */
+      } catch (err) {
+        alert(err.message || err);
+        setStatus('Failed to get location.');
+      }
+    });
+
+    // Enable Confirm whenever we have an image candidate
+    confirmBtn.disabled = true;
+
+    // Hook the visible Upload button to the hidden input
+    document.querySelector('label > button').addEventListener('click', () => fileInput.click());
+
+    // Download CSV
+    downloadBtn.addEventListener('click', () => {
+      const blob = makeCSVBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lanternfly_reports.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Progressive enabling
+    // Confirm is enabled whenever imgDataUrl is present; handled inside event flows
+  </script>
+</body>
+</html>
