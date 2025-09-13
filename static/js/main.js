@@ -221,9 +221,14 @@ function initMapIfPresent() {
       let sizeClass = "small";
       if (count >= 50 && count < 200) sizeClass = "medium";
       else if (count >= 200) sizeClass = "large";
+      let hasMine = false;
+      try {
+        hasMine = cluster.getAllChildMarkers().some(m => m && m.options && m.options.isMine);
+      } catch {}
+      const classes = "marker-cluster marker-cluster-" + sizeClass + (hasMine ? " has-mine" : "");
       return new L.DivIcon({
         html: "<div><span>" + count + "</span></div>",
-        className: "marker-cluster marker-cluster-" + sizeClass,
+        className: classes,
         iconSize: L.point(
           sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30,
           sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30
@@ -245,37 +250,67 @@ function initMapIfPresent() {
     let lr = null; let lrTs = null; let reportedMarker = null;
     try { lr = JSON.parse(localStorage.getItem('lfq.lastReport') || 'null'); lrTs = lr?.timestamp || null; } catch {}
 
+    function prettyDate(val){
+      if (val == null) return "";
+      const raw = String(val).trim().replace(/^["']+|["']+$/g, "");
+      if (!raw) return "";
+      // Show human-friendly time when possible, else show raw
+      try {
+        // ISO 8601 with Z or timezone
+        const d1 = new Date(raw);
+        if (!isNaN(d1.valueOf())) return d1.toLocaleString();
+        // Numeric epoch seconds or ms
+        const n = Number(raw);
+        if (isFinite(n) && n > 0) {
+          const ms = n < 1e12 ? n * 1000 : n;
+          const d2 = new Date(ms);
+          if (!isNaN(d2.valueOf())) return d2.toLocaleString();
+        }
+      } catch {}
+      return raw;
+    }
+
+    // Keep pins even if date fails to parse; we will display raw
+
     for (const row of rows) {
-      const lat = Number(row.latitude ?? row.lat ?? row.Latitude);
-      const lon = Number(row.longitude ?? row.lon ?? row.Longitude);
+      // Normalize keys: trim + lowercase to be resilient to CSV header variations
+      const norm = {};
+      for (const k in row) {
+        if (!Object.prototype.hasOwnProperty.call(row, k)) continue;
+        norm[String(k).trim().toLowerCase()] = row[k];
+      }
+
+      const lat = Number(norm['latitude'] ?? norm['lat']);
+      const lon = Number(norm['longitude'] ?? norm['lon']);
       if (!isFinite(lat) || !isFinite(lon)) continue;
-      const displayName = row.name || row.Name || "Sighting";
+      const displayName = (norm['name'] ?? 'Sighting');
       let popup = `<b>${displayName}</b><br>`;
-      const date = row.date || row.TimestampISO || row.timestamp || row.Date;
-      if (date) popup += `<i>${date}</i><br>`;
-      const img = row.image_link || row.ImageDataURL || row.Image;
-      if (img) popup += `<img src="${img}" alt="Lanternfly" width="120" />`;
+      const date = norm['date'] ?? norm['timestampiso'] ?? norm['timestamp'];
+      const dateStr = prettyDate(date);
+      if (dateStr) popup += `<i>${dateStr}</i><br>`;
+      const img = norm['image_link'] ?? norm['imagedataurl'] ?? norm['image'];
+      if (img) popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
       // Choose icon: default Leaflet pin for most; a blue SVG pin for current user's pins
-      const rowNameLc = (row.Name || row.name || '').toLowerCase();
-      const rowEmailLc = (row.Email || row.email || '').toLowerCase();
+      const rowNameLc = (norm['name'] || '').toLowerCase();
+      const rowEmailLc = (norm['email'] || '').trim().toLowerCase();
       let marker;
-      if ((currentUserEmail && rowEmailLc && rowEmailLc === currentUserEmail) ||
-          (!currentUserEmail && currentUserName && rowNameLc && rowNameLc === currentUserName)) {
+      // Only use email for matching to avoid false positives
+      if (currentUserEmail && rowEmailLc && rowEmailLc === currentUserEmail) {
         const svg = `<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#0ea5e9"/>
+          <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#ef4444"/>
           <circle cx="12.5" cy="12.5" r="5.5" fill="#ffffff"/>
         </svg>`;
         const icon = L.divIcon({ className: 'lfq-pin', html: svg, iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [0,-34] });
-        marker = L.marker([lat, lon], { opacity: 1, icon });
+        marker = L.marker([lat, lon], { opacity: 1, icon, isMine: true });
       } else {
-        marker = L.marker([lat, lon], { opacity: 1 });
+        marker = L.marker([lat, lon], { opacity: 1, isMine: false });
       }
       marker.bindPopup(popup);
       clusters.addLayer(marker);
 
       // If this row matches the last submitted report, remember its marker
       if (!reportedMarker) {
-        const rowTs = (row.Date || row.date || row.TimestampISO || row.timestamp || '').toString();
+        const rowTs = String(norm['date'] ?? norm['timestampiso'] ?? norm['timestamp'] ?? '');
         const tsMatch = lrTs && rowTs && rowTs === lrTs;
         const coordMatch = lr && Math.abs(lat - Number(lr.latitude ?? lr.lat ?? NaN)) < 1e-5 && Math.abs(lon - Number(lr.longitude ?? lr.lon ?? NaN)) < 1e-5;
         if (tsMatch || coordMatch) reportedMarker = marker;
@@ -305,8 +340,23 @@ function initMapIfPresent() {
             });
             if (nearest) clusters.zoomToShowLayer(nearest, () => nearest.openPopup());
           }
+        } else {
+          // If we haven't found the just-submitted report yet, retry a few times quickly
+          try {
+            const tries = Number(lrLocal.tries || 0);
+            if (tries < 20) {
+              lrLocal.tries = tries + 1;
+              localStorage.setItem('lfq.lastReport', JSON.stringify(lrLocal));
+              setTimeout(() => { try { refreshData && refreshData(); } catch {} }, 600);
+            } else {
+              localStorage.removeItem('lfq.lastReport');
+            }
+          } catch {}
         }
-        localStorage.removeItem('lfq.lastReport');
+        // When we’ve centered and opened, clear the hint
+        try {
+          if (reportedMarker) localStorage.removeItem('lfq.lastReport');
+        } catch {}
       }
     } catch {}
   }
@@ -348,7 +398,15 @@ function initMapIfPresent() {
     }
   }
 
+  // For this app, prefer CSV as the single source of truth.
+  // Set CSV_ONLY=false if you want to re-enable the server source.
+  const CSV_ONLY = true;
+
   async function refreshData() {
+    if (CSV_ONLY) {
+      await loadFromCSV();
+      return;
+    }
     const ok = await loadFromServer();
     if (!ok) await loadFromCSV();
   }

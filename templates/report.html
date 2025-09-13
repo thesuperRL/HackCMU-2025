@@ -146,7 +146,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- Your JS -->
-  <script src="../static/js/main.js"></script>
+  <script src="../static/js/main.js?v=3"></script>
   <script>
     let imgDataUrl=null, stream=null;
     const nameInput=document.getElementById("nameInput");
@@ -231,9 +231,9 @@
         if(resp.ok && json.status==='ok'){ 
           setStatus('Report submitted. Thank you!');
           verifyMsg.textContent='';
-          try{ localStorage.setItem('lfq.lastReport', JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString() })); }catch{}
-          // Navigate to Home so the fresh CSV is loaded and the map centers to your report
-          setTimeout(()=>{ window.location.href = '/?justReported=1'; }, 500);
+          try{ localStorage.setItem('lfq.lastReport', JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString(), tries: 0 })); }catch{}
+          // Navigate to Home; indexing script will retry loading until the new row appears
+          setTimeout(()=>{ window.location.href = '/?justReported=1'; }, 900);
         }
         else { setStatus('Submission failed.'); verifyMsg.textContent=json.message||'Please try again later.'; }
       }catch(err){ setStatus('Submission error.'); }

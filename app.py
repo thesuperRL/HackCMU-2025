@@ -3,7 +3,7 @@ import os
 import csv
 import base64
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine, text, select, insert, update, MetaData, Table, exists
 from sqlalchemy.orm import sessionmaker
@@ -146,7 +146,28 @@ def submit_report():
         lat = float(data.get("latitude"))
         lon = float(data.get("longitude"))
         image = data.get("image") or ""
-        date_iso = data.get("timestamp") or ""
+        raw_ts = (data.get("timestamp") or "").strip()
+
+        def parse_iso(ts: str) -> str:
+            if not ts:
+                return ""
+            try:
+                s = ts.strip()
+                # Accept trailing Z by converting to +00:00
+                if s.endswith("Z"):
+                    s2 = s[:-1] + "+00:00"
+                else:
+                    s2 = s
+                dt = datetime.fromisoformat(s2)
+                if not dt.tzinfo:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc).isoformat()
+            except Exception:
+                return ""
+
+        # Start with client timestamp (may be empty)
+        client_date_iso = parse_iso(raw_ts)
+        date_iso = client_date_iso
 
         csv_path = os.path.join(app.root_path, "static", "data", "lanternflydata.csv")
         file_exists = os.path.exists(csv_path)
@@ -168,6 +189,38 @@ def submit_report():
                         out.write(img_bytes)
                     # store web path
                     image = f"/static/uploads/{fname}"
+
+                    # Prefer image-derived date over client-provided timestamp
+                    image_date_iso = ""
+                    try:
+                        from PIL import Image, ExifTags  # type: ignore
+                        exif_dt = ""
+                        with Image.open(fpath) as im:
+                            exif = im.getexif() or {}
+                            if exif:
+                                label_map = {ExifTags.TAGS.get(k, str(k)): v for k, v in exif.items()}
+                                # Prefer DateTimeOriginal, then DateTime
+                                exif_dt = label_map.get("DateTimeOriginal") or label_map.get("DateTime") or ""
+                        if exif_dt:
+                            # EXIF format: YYYY:MM:DD HH:MM:SS
+                            try:
+                                dt = datetime.strptime(exif_dt, "%Y:%m:%d %H:%M:%S").replace(tzinfo=None)
+                                image_date_iso = dt.strftime("%Y-%m-%dT%H:%M:%S")
+                            except Exception:
+                                image_date_iso = ""
+                    except Exception:
+                        image_date_iso = ""
+
+                    if not image_date_iso:
+                        try:
+                            mtime = os.path.getmtime(fpath)
+                            image_date_iso = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+                        except Exception:
+                            image_date_iso = ""
+
+                    # Override with image-derived date if available; else keep client or fallback later
+                    if image_date_iso:
+                        date_iso = image_date_iso
                 except Exception:
                     # fallback: keep original string if something goes wrong
                     pass
@@ -188,7 +241,15 @@ def submit_report():
             writer = csv.writer(f)
             if size == 0:
                 writer.writerow(["Name", "Email", "Longitude", "Latitude", "Image", "Date"])
-            writer.writerow([name, email, lon, lat, image, date_iso])
+            # Ensure we always store a non-empty date; fallback to now in UTC
+            final_date = date_iso or datetime.now(tz=timezone.utc).isoformat()
+            writer.writerow([name, email, lon, lat, image, final_date])
+            # Force contents to disk to avoid race with immediate readers
+            try:
+                f.flush()
+                os.fsync(f.fileno())
+            except Exception:
+                pass
 
         return jsonify({"status": "ok"})
     except Exception as e:

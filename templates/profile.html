@@ -111,7 +111,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
   <div id="g_id_onload" data-auto_prompt="false" data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com" data-callback="handleCredentialResponse"></div>
 
   <script>
@@ -120,7 +120,14 @@
         return JSON.parse(localStorage.getItem('lfq.user')) || JSON.parse(localStorage.getItem('LFQ_USER')) || null;
       } catch { return null; }
     }
-    function fmtDate(d){ try{ return new Date(d).toLocaleDateString(); }catch{ return d || '—'; } }
+    function fmtDate(d){
+      try {
+        const dt = new Date(d);
+        if (!isNaN(dt.valueOf())) return dt.toLocaleDateString();
+        const s = (d==null? '': String(d).trim());
+        return s || '—';
+      } catch { return (d==null? '—' : String(d)); }
+    }
     function dayDiff(a,b){ try{ return Math.max(0, Math.round((new Date(b)-new Date(a))/(1000*60*60*24))); }catch{ return 0; } }
 
     async function loadAllLocations(){

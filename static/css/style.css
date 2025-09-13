@@ -71,6 +71,25 @@ img {
   display: none !important;
 }
 
+/* Cluster shading when it contains user's pins */
+.marker-cluster.has-mine div {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.7) inset, 0 1px 6px rgba(0,0,0,.35);
+}
+
+/* Popup image sizing */
+.leaflet-popup-content img.lfq-pop-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  object-fit: contain;
+}
+
+/* Ensure popup content has a consistent width so images render uniformly */
+.leaflet-popup-content {
+  width: 260px !important; /* fits typical phone screenshots and uploaded images */
+}
+
 /* Small pin for personal reports */
 .pin { width:14px; height:14px; border-radius:999px; border:2px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.35); }
 .pin.mine { background: #0ea5e9; }

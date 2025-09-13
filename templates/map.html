@@ -28,6 +28,14 @@
             right: 0;
             left: 0;
         }
+        /* Fit popup images inside the popup */
+        .leaflet-popup-content img.pop-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            object-fit: contain;
+        }
     </style>
 
 </head>
@@ -76,11 +84,13 @@
                 var popupContent = `<b>${row.Name}</b><br>`;
 
                 if (row.Date) {
-                    popupContent += `<i>${row.Date}</i><br>`;
+                    let ds = String(row.Date).trim().replace(/^["']+|["']+$/g, "");
+                    let d = new Date(ds);
+                    popupContent += `<i>${isNaN(d.valueOf()) ? ds : d.toLocaleString()}</i><br>`;
                 }
 
                 if (row.Image) {
-                    popupContent += `<img src="${row.Image}" alt="${row.Name}" width="120" />`;
+                    popupContent += `<img class="pop-img" src="${row.Image}" alt="${row.Name}" />`;
                 }
 
                 // Debugging: print the popup content
