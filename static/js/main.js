@@ -421,16 +421,10 @@ function initMapIfPresent() {
       const lon = Number(norm["longitude"] ?? norm["lon"]);
       if (!isFinite(lat) || !isFinite(lon)) continue;
       const displayName = norm["name"] ?? "Sighting";
-      let popup = `<b>${displayName}</b><br>`;
-      const date = norm["date"] ?? norm["timestampiso"] ?? norm["timestamp"];
-      const dateStr = prettyDate(date);
-      if (dateStr) popup += `<i>${dateStr}</i><br>`;
-      const img = hexDumpToDataUrl(norm["image_bytes"]);
-      if (img) {
-        popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
-      }
+      const dateRaw =
+        norm["date"] ?? norm["timestampiso"] ?? norm["timestamp"];
+      const imageHex = norm["image_bytes"];
       // Choose icon: default Leaflet pin for most; a blue SVG pin for current user's pins
-      const rowNameLc = (norm["name"] || "").toLowerCase();
       const rowEmailLc = (norm["email"] || "").trim().toLowerCase();
       let marker;
       // Only use email for matching to avoid false positives
@@ -450,7 +444,19 @@ function initMapIfPresent() {
       } else {
         marker = L.marker([lat, lon], { opacity: 1, isMine: false });
       }
-      marker.bindPopup(popup);
+      // Lazily render popup so image conversion does not block initial load
+      marker.bindPopup(() => {
+        let html = `<b>${displayName}</b><br>`;
+        const ds = prettyDate(dateRaw);
+        if (ds) html += `<i>${ds}</i><br>`;
+        if (imageHex) {
+          try {
+            const url = hexDumpToDataUrl(imageHex);
+            html += `<img class="lfq-pop-img" src="${url}" alt="Lanternfly" />`;
+          } catch {}
+        }
+        return html;
+      });
       clusters.addLayer(marker);
 
       // If this row matches the last submitted report, remember its marker
@@ -466,7 +472,7 @@ function initMapIfPresent() {
         if (tsMatch || coordMatch) reportedMarker = marker;
       }
     }
-    map.addLayer(clusters);
+    if (!map.hasLayer(clusters)) map.addLayer(clusters);
     // If coming from a fresh report, center on that location
     try {
       const lrLocal =
@@ -542,13 +548,17 @@ function initMapIfPresent() {
     }
   }
 
+  let _lfqTimersSet = false;
   async function refreshData() {
-    const ok = await loadFromServer();
-    // Initial load and continuous refresh based on table
-    setInterval(refreshData, 2000000);
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) refreshData();
-    });
+    await loadFromServer();
+    // Initial load and continuous refresh based on table (set once)
+    if (!_lfqTimersSet) {
+      setInterval(refreshData, 2000000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshData();
+      });
+      _lfqTimersSet = true;
+    }
   }
 
   refreshData();
