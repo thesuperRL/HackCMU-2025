@@ -80,6 +80,7 @@ def give_leaderboard_data():
             leaderboardData.append({
                 "username": row.google_name,
                 "catches": row.count,
+                "uid": row.google_uid,
             })
 
     # Return something back to JS

@@ -16,19 +16,19 @@ const fmtTimeAgo = (iso) => {
 };
 
 async function getScores() {
-    try {
-        const response = await fetch("/leaderboard-data", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "request" }),
-        });
-        const data = await response.json();
-        console.log("Status:", data);
-        return data; // This will return the actual data
-    } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-        return []; // Return empty array on error
-    }
+  try {
+    const response = await fetch("/leaderboard-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request" }),
+    });
+    const data = await response.json();
+    console.log("Status:", data);
+    return data; // This will return the actual data
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    return []; // Return empty array on error
+  }
 }
 
 function setScores(obj) {
@@ -42,7 +42,7 @@ const emptyEl = document.getElementById("emptyState");
 const lastSyncEl = document.getElementById("lastSync");
 const searchEl = document.getElementById("searchInput");
 
-const sortState = { key: "catches", dir: "desc" }; // default sort
+const sortState = { key: "catches", dir: "asc" }; // default sort
 const sortableHeaders = Array.from(document.querySelectorAll("th.sortable"));
 
 async function computeRows(filterTerm = "") {
@@ -57,6 +57,7 @@ async function computeRows(filterTerm = "") {
     rows = data.map((item, index) => ({
       username: item.username,
       catches: item.catches,
+      uid: item.uid,
       // Add other properties if they exist in your data
       id: index,
     }));
@@ -118,8 +119,8 @@ async function computeRows(filterTerm = "") {
     if (a.catches !== b.catches) return b.catches - a.catches;
     return a.username.localeCompare(b.username);
   });
-  const rankMap = new Map(byScore.map((r, i) => [r.username, i + 1]));
-  filtered.forEach((r) => (r.rank = rankMap.get(r.username)));
+  const rankMap = new Map(byScore.map((r, i) => [r.uid, i + 1]));
+  filtered.forEach((r) => (r.rank = rankMap.get(r.uid)));
 
   return filtered;
 }
@@ -133,17 +134,43 @@ async function render() {
   } else {
     emptyEl.hidden = true;
     for (const r of rows) {
-      const tr = document.createElement("tr");
+      var tr;
+      var tdRank;
+      var tdUser;
+      var tdC;
 
-      const tdRank = document.createElement("td");
-      tdRank.className = "rank";
-      tdRank.textContent = r.rank ?? "—";
+      if (
+        localStorage.getItem("lfq.user") != null &&
+        (localStorage.getItem("lfq.user").uid = r.uid)
+      ) {
+        console.log("Current user same!!!");
+        tr = document.createElement("tr");
 
-      const tdUser = document.createElement("strong");
-      tdUser.textContent = r.username;
+        tdRank = document.createElement("td");
+        tdRank.className = "rank";
+        tdRank.classList.add("user_self");
+        tdRank.textContent = r.rank ?? "—";
 
-      const tdC = document.createElement("td");
-      tdC.textContent = r.catches ?? 0;
+        tdUser = document.createElement("strong");
+        tdUser.classList.add("user_self");
+        tdUser.textContent = r.username;
+
+        tdC = document.createElement("td");
+        tdC.classList.add("user_self");
+        tdC.textContent = r.catches ?? 0;
+      } else {
+        tr = document.createElement("tr");
+
+        tdRank = document.createElement("td");
+        tdRank.className = "rank";
+        tdRank.textContent = r.rank ?? "—";
+
+        tdUser = document.createElement("strong");
+        tdUser.textContent = r.username;
+
+        tdC = document.createElement("td");
+        tdC.textContent = r.catches ?? 0;
+      }
 
       tr.append(tdRank, tdUser, tdC);
       bodyEl.appendChild(tr);
