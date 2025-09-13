@@ -12,6 +12,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 
 accounts = Table("user", metadata, autoload_with=engine)
+maps = Table("maps", metadata, autoload_with=engine)
 
 @app.route("/")
 def index():
@@ -84,6 +85,31 @@ def give_leaderboard_data():
 
     # Return something back to JS
     return jsonify(leaderboardData)
+
+
+@app.route("/locations", methods=["POST"])
+def give_locations():
+    data = request.get_json()
+    location_json = data.get("location_json")  # variable sent from JS
+    print(f"Received from JS: {location_json}")
+
+    mapsData = []
+
+    query = select(maps)
+
+    with engine.begin() as conn:
+        conn.execute(query)
+        for row in conn.execute(query)  :
+            mapsData.append({
+                "name": row.name,
+                "longitude": row.longitude,
+                "latitude": row.latitude,
+                "image_link": row.image_link,
+                "date": row.date,
+            })
+
+    # Return something back to JS
+    return jsonify(mapsData)
 
 if __name__ == "__main__":
     app.run(debug=True)
