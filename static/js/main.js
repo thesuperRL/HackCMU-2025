@@ -25,8 +25,6 @@ function decodeJWT(token) {
 }
 
 function handleCredentialResponse(response) {
-  console.log("Encoded JWT ID token: " + response.credential);
-
   const responsePayload = decodeJWT(response.credential);
 
   sendToFlask({
@@ -428,9 +426,7 @@ function initMapIfPresent() {
       const dateStr = prettyDate(date);
       if (dateStr) popup += `<i>${dateStr}</i><br>`;
       const img = hexDumpToDataUrl(norm["image_bytes"]);
-      console.log(norm["image_bytes"].substr(1, norm["image_bytes"].length));
       if (img) {
-        console.log(img);
         popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
       }
       // Choose icon: default Leaflet pin for most; a blue SVG pin for current user's pins

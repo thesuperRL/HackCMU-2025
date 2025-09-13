@@ -137,9 +137,14 @@ confirmBtn.addEventListener("click", async () => {
     alert("Please select/take a photo first.");
     return;
   }
+
   // Test mode: skip verification, always submit
-  verifyMsg.textContent = "Verification skipped (test). Submitting…";
   const u = getSavedUser();
+  if (!u) {
+    setStatus("Please log in before submitting!");
+    return;
+  }
+  verifyMsg.textContent = "Verification skipped (test). Submitting…";
   const name =
     nameInput.value.trim() || (u && (u.name || u.email)) || "Anonymous";
   const email = u && u.email ? u.email : "";
