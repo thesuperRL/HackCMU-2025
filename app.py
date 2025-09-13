@@ -20,23 +20,13 @@ app = Flask(__name__)
 # Allow running without DB for local/dev
 DISABLE_DB = os.getenv("DISABLE_DB", "0") == "1"
 
-DATABASE_URL = "postgresql://neondb_owner:npg_IynsOvqCp54B@ep-solitary-waterfall-aeaz3n0s-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
-engine = None
-SessionLocal = None
+DATABASE_URL = "postgresql://postgres.utmrquefkcroaonmstgk:akudjsnvas;i@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+engine = create_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 
-accounts = None
-maps = None
-
-if not DISABLE_DB:
-    try:
-        engine = create_engine(DATABASE_URL, echo=True)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        accounts = Table("user", metadata, autoload_with=engine)
-        maps = Table("maps", metadata, autoload_with=engine)
-    except Exception as e:
-        print(f"[WARN] DB init failed: {e}. Falling back to DISABLE_DB mode.")
-        DISABLE_DB = True
+accounts = Table("user", metadata, autoload_with=engine)
+maps = Table("maps", metadata, autoload_with=engine)
 
 @app.route("/")
 def index():
