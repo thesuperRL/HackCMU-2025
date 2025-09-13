@@ -137,6 +137,21 @@ confirmBtn.addEventListener("click", async () => {
     alert("Please select/take a photo first.");
     return;
   }
+  // Test mode: verification
+  const formData = new FormData();
+  formData.append("file", imgDataUrl);
+
+  fetch("/predict", {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(`Prediction: Class ${data.class}, Confidence: ${(data.confidence * 100).toFixed(2)}%`);
+  })
+  .catch(err => console.error(err));
+  });
+
 
   // Test mode: skip verification, always submit
   const u = getSavedUser();
