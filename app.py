@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 app = Flask(__name__)
 
-DATABASE_URL = "postgresql+psycopg2://postgres:1234@localhost:5432/postgres"
+DATABASE_URL = "postgresql://neondb_owner:npg_IynsOvqCp54B@ep-solitary-waterfall-aeaz3n0s-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
