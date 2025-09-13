@@ -1,18 +1,35 @@
 from flask import Flask, request, jsonify, render_template
 import os
+import csv
+import base64
+import re
+from datetime import datetime
 
 from sqlalchemy import create_engine, text, select, insert, update, MetaData, Table, exists
 from sqlalchemy.orm import sessionmaker
 
 app = Flask(__name__)
 
+# Allow running without DB for local/dev
+DISABLE_DB = os.getenv("DISABLE_DB", "0") == "1"
+
 DATABASE_URL = "postgresql://neondb_owner:npg_IynsOvqCp54B@ep-solitary-waterfall-aeaz3n0s-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = None
+SessionLocal = None
 metadata = MetaData()
 
-accounts = Table("user", metadata, autoload_with=engine)
-maps = Table("maps", metadata, autoload_with=engine)
+accounts = None
+maps = None
+
+if not DISABLE_DB:
+    try:
+        engine = create_engine(DATABASE_URL, echo=True)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        accounts = Table("user", metadata, autoload_with=engine)
+        maps = Table("maps", metadata, autoload_with=engine)
+    except Exception as e:
+        print(f"[WARN] DB init failed: {e}. Falling back to DISABLE_DB mode.")
+        DISABLE_DB = True
 
 @app.route("/")
 def index():
@@ -77,16 +94,18 @@ def give_leaderboard_data():
 
     leaderboardData = []
 
-    query = select(accounts)
-
-    with engine.begin() as conn:
-        conn.execute(query)
-        for row in conn.execute(query)  :
-            leaderboardData.append({
-                "username": row.google_name,
-                "catches": row.count,
-                "uid": row.google_uid,
-            })
+    if not DISABLE_DB and accounts is not None and engine is not None:
+        query = select(accounts)
+        with engine.begin() as conn:
+            conn.execute(query)
+            for row in conn.execute(query):
+                leaderboardData.append({
+                    "username": row.google_name,
+                    "catches": row.count,
+                    "uid": row.google_uid,
+                })
+    else:
+        print("[INFO] DB disabled; returning empty leaderboard")
 
     # Return something back to JS
     return jsonify(leaderboardData)
@@ -100,21 +119,135 @@ def give_locations():
 
     mapsData = []
 
-    query = select(maps)
-
-    with engine.begin() as conn:
-        conn.execute(query)
-        for row in conn.execute(query)  :
-            mapsData.append({
-                "name": row.name,
-                "longitude": row.longitude,
-                "latitude": row.latitude,
-                "image_link": row.image_link,
-                "date": row.date,
-            })
+    if not DISABLE_DB and maps is not None and engine is not None:
+        query = select(maps)
+        with engine.begin() as conn:
+            conn.execute(query)
+            for row in conn.execute(query):
+                mapsData.append({
+                    "name": row.name,
+                    "longitude": row.longitude,
+                    "latitude": row.latitude,
+                    "image_link": row.image_link,
+                    "date": row.date,
+                })
+    else:
+        print("[INFO] DB disabled; returning CSV-only data (client will load CSV)")
 
     # Return something back to JS
     return jsonify(mapsData)
+
+@app.route("/submit_report", methods=["POST"])
+def submit_report():
+    try:
+        data = request.get_json(force=True)
+        name = (data.get("name") or "").strip() or "Anonymous"
+        email = (data.get("email") or "").strip()
+        lat = float(data.get("latitude"))
+        lon = float(data.get("longitude"))
+        image = data.get("image") or ""
+        date_iso = data.get("timestamp") or ""
+
+        csv_path = os.path.join(app.root_path, "static", "data", "lanternflydata.csv")
+        file_exists = os.path.exists(csv_path)
+
+        # If image is a data URL, persist it to static/uploads and store the file path instead
+        if image.startswith("data:image"):
+            m = re.match(r"^data:image\/(png|jpeg|jpg);base64,(.+)$", image)
+            if m:
+                ext = "jpg" if m.group(1) in ("jpeg","jpg") else "png"
+                b64 = m.group(2)
+                try:
+                    img_bytes = base64.b64decode(b64)
+                    uploads_dir = os.path.join(app.root_path, "static", "uploads")
+                    os.makedirs(uploads_dir, exist_ok=True)
+                    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%S%f")
+                    fname = f"lf_{ts}.{ext}"
+                    fpath = os.path.join(uploads_dir, fname)
+                    with open(fpath, "wb") as out:
+                        out.write(img_bytes)
+                    # store web path
+                    image = f"/static/uploads/{fname}"
+                except Exception:
+                    # fallback: keep original string if something goes wrong
+                    pass
+
+        size = os.path.getsize(csv_path) if file_exists else 0
+        with open(csv_path, mode="a", newline="", encoding="utf-8") as f:
+            # Ensure previous file ends with a newline before appending
+            if size > 0:
+                try:
+                    with open(csv_path, mode="rb") as fr:
+                        fr.seek(-1, os.SEEK_END)
+                        last = fr.read(1)
+                    if last not in (b"\n", b"\r"):
+                        f.write("\n")
+                except Exception:
+                    pass
+
+            writer = csv.writer(f)
+            if size == 0:
+                writer.writerow(["Name", "Email", "Longitude", "Latitude", "Image", "Date"])
+            writer.writerow([name, email, lon, lat, image, date_iso])
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/admin/migrate_csv", methods=["POST", "GET"])
+def migrate_csv_add_email():
+    """Add Email column to CSV and populate with fake emails for rows missing it.
+    Safe to run multiple times; preserves existing values.
+    """
+    try:
+        csv_path = os.path.join(app.root_path, "static", "data", "lanternflydata.csv")
+        if not os.path.exists(csv_path):
+            return jsonify({"status": "error", "message": "CSV not found"}), 404
+
+        # Load rows
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            fields = reader.fieldnames or []
+
+        desired = ["Name", "Email", "Longitude", "Latitude", "Image", "Date"]
+
+        # Build fake emails
+        used = set()
+        def mk_email(name, idx):
+            base = re.sub(r"[^a-z0-9]+", "", (name or "").lower()) or f"user{idx}"
+            email = f"{base}@example.com"
+            i = 1
+            while email in used:
+                email = f"{base}{i}@example.com"
+                i += 1
+            used.add(email)
+            return email
+
+        out_rows = []
+        updated = 0
+        for idx, r in enumerate(rows, 1):
+            name = r.get("Name") or r.get("name") or ""
+            email = r.get("Email") or r.get("email") or ""
+            lon = r.get("Longitude") or r.get("longitude") or ""
+            lat = r.get("Latitude") or r.get("latitude") or ""
+            img = r.get("Image") or r.get("image") or r.get("image_link") or ""
+            date = r.get("Date") or r.get("date") or r.get("TimestampISO") or r.get("timestamp") or ""
+            if not email:
+                email = mk_email(name, idx)
+                updated += 1
+            out_rows.append({"Name": name, "Email": email, "Longitude": lon, "Latitude": lat, "Image": img, "Date": date})
+
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=desired)
+            w.writeheader()
+            for r in out_rows:
+                w.writerow(r)
+
+        return jsonify({"status": "ok", "updated": updated, "total": len(out_rows)})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

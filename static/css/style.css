@@ -71,6 +71,11 @@ img {
   display: none !important;
 }
 
+/* Small pin for personal reports */
+.pin { width:14px; height:14px; border-radius:999px; border:2px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.35); }
+.pin.mine { background: #0ea5e9; }
+.pin.other { background: #f97316; }
+
 .container {
   width: min(1100px, 92%);
   margin: 0 auto;
@@ -129,7 +134,7 @@ img {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 2000; /* Above Leaflet panes */
   backdrop-filter: saturate(1.2) blur(10px);
   background: rgba(8, 13, 32, .6);
   border-bottom: 1px solid rgba(255, 255, 255, .06);
@@ -562,4 +567,3 @@ html {
     justify-self: start;    /* align left under the text */
   }
 }
-

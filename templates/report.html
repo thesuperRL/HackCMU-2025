@@ -99,7 +99,7 @@
       <div class="container hero-inner">
         <div>
           <h1>Report a Lanternfly</h1>
-          <p class="lead">Add a photo and your current location. We’ll bundle it into a CSV row you can download or upload to your database.</p>
+          <p class="lead">Take or upload a photo of a dead lanternfly. We’ll verify it before saving your photo and location to the dataset.</p>
         </div>
       </div>
     </section>
@@ -116,17 +116,17 @@
           <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none"/>
           <button id="uploadBtn" class="btn" type="button"><i class="bi bi-upload"></i> Upload Photo</button>
           <button id="openCam" class="btn" type="button"><i class="bi bi-camera-video"></i> Take Picture</button>
-          <button id="snap" class="btn secondary" type="button" disabled>Snap</button>
-          <button id="closeCam" class="btn secondary" type="button" disabled>Close Camera</button>
-          <button id="confirm" class="btn cta" type="button" disabled>Confirm & Add to CSV</button>
+          <button id="snap" class="btn secondary" type="button" disabled><i class="bi bi-camera"></i> Snap</button>
+          <button id="closeCam" class="btn secondary" type="button" disabled><i class="bi bi-x-circle"></i> Close Camera</button>
+          <button id="confirm" class="btn cta" type="button" disabled><i class="bi bi-check-circle"></i> Verify & Submit</button>
         </div>
 
-        <video id="video" autoplay playsinline style="max-width:100%; border-radius:8px; display:none"></video>
-        <img id="preview" alt="preview" style="max-width:100%; border-radius:8px; display:none; margin-top:8px"/>
-        <div id="status" class="muted" style="margin-top:8px"></div>
-        <div class="row" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
-          <button id="downloadCSV" class="btn" type="button" disabled>Download Updated CSV</button>
+        <div class="cam-wrap" style="position:relative; max-width:100%;">
+          <video id="video" autoplay playsinline style="width:100%; border-radius:8px; display:none"></video>
+        <img id="preview" alt="preview" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; border-radius:8px; display:none;"/>
         </div>
+        <div id="status" class="muted" style="margin-top:8px"></div>
+        <div id="verifyMsg" class="muted" style="margin-top:6px"></div>
       </div>
     </section>
   </main>
@@ -148,9 +148,7 @@
   <!-- Your JS -->
   <script src="../static/js/main.js"></script>
   <script>
-    // --- CSV/camera/upload logic same as before ---
-    const CSV_COLUMNS=["Name","Latitude","Longitude","AccuracyMeters","TimestampISO","ImageDataURL"];
-    let rows=[], imgDataUrl=null, stream=null;
+    let imgDataUrl=null, stream=null;
     const nameInput=document.getElementById("nameInput");
     const fileInput=document.getElementById("fileInput");
     const uploadBtn=document.getElementById("uploadBtn");
@@ -158,22 +156,39 @@
     const snapBtn=document.getElementById("snap");
     const closeBtn=document.getElementById("closeCam");
     const confirmBtn=document.getElementById("confirm");
-    const downloadBtn=document.getElementById("downloadCSV");
     const video=document.getElementById("video");
     const preview=document.getElementById("preview");
     const canvas=document.getElementById("canvas");
     const statusEl=document.getElementById("status");
+    const verifyMsg=document.getElementById("verifyMsg");
+
+    function getSavedUser(){
+      try{ return JSON.parse(localStorage.getItem('lfq.user')||'null'); }catch{ return null; }
+    }
 
     function setStatus(m){statusEl.textContent=m;}
     function enableConfirm(){confirmBtn.disabled=!imgDataUrl;}
-    function toCSVLine(values){return values.map(v=>{const s=v==null?"":String(v);return /[" ,\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",");}
-    function makeCSVBlob(){const header=toCSVLine(CSV_COLUMNS);const lines=rows.map(r=>toCSVLine(CSV_COLUMNS.map(c=>r[c])));return new Blob([header+"\n"+lines.join("\n")],{type:"text/csv"});}
+    function analyzeImage(url){
+      return new Promise((resolve)=>{
+        const img=new Image();
+        img.onload=()=>{
+          const w=256,h=256; const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d');
+          g.drawImage(img,0,0,w,h);
+          const d=g.getImageData(0,0,w,h).data; let reds=0,dark=0,varc=0,n=w*h;
+          for(let i=0;i<d.length;i+=4){ const r=d[i],g1=d[i+1],b=d[i+2]; const mx=Math.max(r,g1,b), mn=Math.min(r,g1,b); const s=mx? (mx-mn)/mx:0; if(mx>60&&s>0.35&&r>g1&&r>b) reds++; if(mx<40) dark++; if((mx-mn)>50) varc++; }
+          const ok=(reds/n>0.01 && varc/n>0.08)||(dark/n>0.15 && varc/n>0.10);
+          resolve({ok});
+        };
+        img.onerror=()=>resolve({ok:false});
+        img.src=url;
+      });
+    }
 
     uploadBtn.addEventListener("click",()=>fileInput.click());
     fileInput.addEventListener("change",e=>{
       const file=e.target.files[0]; if(!file) return;
       const r=new FileReader();
-      r.onload=()=>{imgDataUrl=r.result; preview.src=imgDataUrl; preview.style.display="block"; setStatus("Photo selected."); enableConfirm();};
+      r.onload=()=>{imgDataUrl=r.result; preview.src=imgDataUrl; preview.style.display="block"; setStatus("Photo selected."); verifyMsg.textContent=''; enableConfirm();};
       r.readAsDataURL(file);
     });
 
@@ -187,7 +202,7 @@
       if(!stream) return;
       canvas.width=video.videoWidth; canvas.height=video.videoHeight;
       canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
-      imgDataUrl=canvas.toDataURL("image/jpeg",0.9); preview.src=imgDataUrl; preview.style.display="block"; setStatus("Snapshot captured."); enableConfirm();
+      imgDataUrl=canvas.toDataURL("image/jpeg",0.9); preview.src=imgDataUrl; preview.style.display="block"; setStatus("Snapshot captured."); verifyMsg.textContent=''; enableConfirm();
     });
     closeBtn.addEventListener("click",()=>{
       if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null;}
@@ -196,18 +211,36 @@
 
     confirmBtn.addEventListener("click",async()=>{
       if(!imgDataUrl){alert("Please select/take a photo first.");return;}
+      // Test mode: skip verification, always submit
+      verifyMsg.textContent='Verification skipped (test). Submitting…';
+      const u = getSavedUser();
+      const name = nameInput.value.trim() || (u && (u.name || u.email)) || 'Anonymous';
+      const email = (u && u.email) ? u.email : '';
+
+      let lat = 0, lon = 0; // default fallback
       setStatus("Getting location…");
       try{
         const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:12000}));
-        const row={Name:nameInput.value.trim(),Latitude:pos.coords.latitude,Longitude:pos.coords.longitude,AccuracyMeters:pos.coords.accuracy,TimestampISO:new Date().toISOString(),ImageDataURL:imgDataUrl};
-        rows.push(row); setStatus(`Added row ${rows.length}.`); downloadBtn.disabled=false;
-      }catch(err){setStatus("Failed to get location.");}
+        lat = pos.coords.latitude; lon = pos.coords.longitude;
+      }catch(err){ setStatus("Location unavailable — submitting without precise location."); }
+
+      try{
+        const payload={ name, email, latitude:lat, longitude:lon, timestamp:new Date().toISOString(), image:imgDataUrl };
+        const resp=await fetch('/submit_report',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+        const json=await resp.json();
+        if(resp.ok && json.status==='ok'){ 
+          setStatus('Report submitted. Thank you!');
+          verifyMsg.textContent='';
+          try{ localStorage.setItem('lfq.lastReport', JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString() })); }catch{}
+          // Navigate to Home so the fresh CSV is loaded and the map centers to your report
+          setTimeout(()=>{ window.location.href = '/?justReported=1'; }, 500);
+        }
+        else { setStatus('Submission failed.'); verifyMsg.textContent=json.message||'Please try again later.'; }
+      }catch(err){ setStatus('Submission error.'); }
     });
 
-    downloadBtn.addEventListener("click",()=>{
-      const blob=makeCSVBlob(); const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download="lanternfly_reports.csv"; a.click(); URL.revokeObjectURL(url);
-    });
+    // Prefill name from Google user if available
+    (function(){ const u=getSavedUser(); if(u && (u.name||u.email) && !nameInput.value) nameInput.value = u.name || u.email; })();
   </script>
 </body>
 </html>

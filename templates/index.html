@@ -200,9 +200,13 @@
     <!-- Map section -->
     <section class="section" id="report">
       <div class="container">
-        <div class="stat" style="grid-template-columns: 1fr auto; margin-bottom: 12px;">
+        <div class="stat" style="grid-template-columns: 1fr auto; margin-bottom: 12px; align-items:center;">
           <h2 style="margin:0">Recent lanternfly reports</h2>
-          <button id="recenter" class="btn small">Recenter to Pittsburgh</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="centerPghBtn" class="btn small">Center to Pittsburgh</button>
+            <button id="resetUSBtn" class="btn small secondary">Reset to U.S.</button>
+            <button id="refreshMapBtn" class="btn small secondary" title="Reload map data">Refresh Map</button>
+          </div>
         </div>
         <div id="map" role="region" aria-label="Lanternfly map"></div>
         <div id="mapError" style="margin-top:8px;color:#f87171;font-weight:700;display:none"></div>
@@ -213,7 +217,6 @@
   <footer class="site-footer">
     <div class="container footer-inner">
       <span>LanternFly Quest · v0.1</span>
-      <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
     </div>
   </footer>
 
