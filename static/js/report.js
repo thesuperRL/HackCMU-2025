@@ -138,17 +138,18 @@ confirmBtn.addEventListener("click", async () => {
     return;
   }
   // Test mode: verification
-  const formData = new FormData();
-  formData.append("file", imgDataUrl);
+  // const formData = new FormData();
+  // formData.append("file", imgDataUrl);
 
   fetch("/predict", {
     method: "POST",
-    body: formData
+    body: JSON.stringify({imageData: imgDataUrl})
   })
   .then(res => res.json())
   .then(data => {
     alert(`Prediction: Class ${data.class}, Confidence: ${(data.confidence * 100).toFixed(2)}%`);
-  }).catch(err => console.error(err));
+  }).catch(err => {alert(imgDataUrl)});
+
   /* 
   if(data.class==1) {
     alert("Lanternfly photos only!");

@@ -232,25 +232,20 @@ def crop_objects(file, conf_thresh=0.5):
 
     return cropped_images
 # Load your trained model once at startup
-
+model = load_model("my_model.h5")
 @app.route("/predict", methods=["POST"])
 def predict():
-    # Ensure a file was uploaded
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    model = load_model("my_model.h5")
-    file = request.files["file"]
-    crops = crop_objects(file, conf_thresh=0.25)
-    if(len(crops)==0):
-        predicted_class=1
-        confidence=0.0
-    else:
-        resized = cv2.resize(crops[0], (224, 224))
-        img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
-        # Make prediction
-        pred = model.predict(img_array)
-        predicted_class = np.argmax(pred, axis=1)[0]
-        confidence = float(pred[0][predicted_class])
+    data = request.get_json()
+    img_data = data["imageData"].split(",")[1]  # remove 'data:image/jpeg;base64,' prefix
+    img_bytes = base64.b64decode(img_data)
+    nparr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    resized = cv2.resize(img, (224, 224))
+    img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
+    # Make prediction
+    pred = model.predict(img_array)
+    predicted_class = np.argmax(pred, axis=1)[0]
+    confidence = float(pred[0][predicted_class])
     return jsonify({ "class": predicted_class, "confidence": confidence})
 if __name__ == "__main__":
     app.run(debug=True)
