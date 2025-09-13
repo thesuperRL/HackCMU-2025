@@ -212,13 +212,14 @@ def submit_report():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
     
-model1 = YOLO("yolov5s.pt")   
-def crop_objects(image_path, conf_thresh=0.5):
+def crop_objects(file, conf_thresh=0.5):
     """
     Returns cropped objects as a list of NumPy arrays (in memory)
     """
-    img = cv2.imread(image_path)
-    results = model1(image_path)[0]  # get predictions
+    model1 = YOLO("yolov5s.pt")   
+    file_bytes = np.frombuffer(file.read(), np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    results = model1.predict(img)[0]  
 
     cropped_images = []
     for i, box in enumerate(results.boxes.xyxy):
@@ -231,26 +232,25 @@ def crop_objects(image_path, conf_thresh=0.5):
 
     return cropped_images
 # Load your trained model once at startup
-model = load_model("my_model.h5")
 
 @app.route("/predict", methods=["POST"])
 def predict():
     # Ensure a file was uploaded
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
+    model = load_model("my_model.h5")
     file = request.files["file"]
-    crops = crop_objects("file", conf_thresh=0.25)
+    crops = crop_objects(file, conf_thresh=0.25)
     if(len(crops)==0):
         predicted_class=1
+        confidence=0.0
     else:
         resized = cv2.resize(crops[0], (224, 224))
         img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
         # Make prediction
         pred = model.predict(img_array)
         predicted_class = np.argmax(pred, axis=1)[0]
-        confidence = pred[0][predicted_class]
-        if(predicted_class==0 and confidence<0.9):
-            predicted_class=1
+        confidence = float(pred[0][predicted_class])
     return jsonify({ "class": predicted_class, "confidence": confidence})
 if __name__ == "__main__":
     app.run(debug=True)
