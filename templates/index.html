@@ -1,84 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackCMU 2025</title>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Add Bootstrap Icons CSS -->
-  <!-- Add Bootstrap Icons CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
-  <title>HackCMU 2025</title>
-  <link rel="stylesheet" href="../static/css/style.css" />
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-</head>
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
 
-<body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <div class="brand">
-        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
-            fill="currentColor" />
-        </svg>
+    <!-- Your site CSS (unchanged) -->
+    <link rel="stylesheet" href="../static/css/style.css" />
 
-        <span class="title">LanternFly Quest</span>
-        <span class="pill">alpha</span>
-      </div>
-      <nav class="nav">
-        <a href="/">Home</a>
-        <a href="/info">About</a>
-        <a href="/learn">Learn</a>
-        <a href="/report">Report</a>
-        <a href="/leaderboard">Leaderboard</a>
-      </nav>
-      <!-- in the header, replace the whole .auth div with this -->
-      <div class="auth">
-        <!-- Google Identity config (keeps One Tap off) -->
-        <div id="g_id_onload" data-auto_prompt="false" data-callback="handleCredentialResponse"
-          data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com">
+    <!-- Leaflet core -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- MarkerCluster plugin -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- CSV tools -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+
+    <!-- Safe, scoped additions so no style.css rules break -->
+    <style>
+      /* Give the map a visible height without touching your global CSS */
+      #map {
+        width: 100%;
+        height: 70vh;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.06);
+        background: #0d1326; /* prevents white box before tiles load */
+        box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+      }
+      @media (max-width: 900px){ #map { height: 60vh; } }
+
+      /* Eliminate tile-gap white flashes without touching your theme */
+      .leaflet-container { background: #0d1326; }
+      .leaflet-tile { background-color: #0d1326 !important; }
+
+      /* Harmonize controls; keep it scoped to Leaflet only */
+      .leaflet-control-attribution,
+      .leaflet-control-scale {
+        background: rgba(17,23,45,.75);
+        color: #9aa4c7;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 10px;
+        padding: 2px 6px;
+        backdrop-filter: blur(6px);
+      }
+      .leaflet-bar a,
+      .leaflet-bar a:hover {
+        background: rgba(17,23,45,.85);
+        color: #eef2ff;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      .leaflet-bar a:last-child { border-bottom: none; }
+
+      /* Cluster sizes (visual only, no class name conflicts) */
+      .marker-cluster-small div { width: 30px; height: 30px; line-height: 30px; border-radius: 999px; font-weight: 800; color: #fff; }
+      .marker-cluster-medium div { width: 44px; height: 44px; line-height: 44px; border-radius: 999px; font-weight: 800; color: #fff; font-size: 14px; }
+      .marker-cluster-large div { width: 60px; height: 60px; line-height: 60px; border-radius: 999px; font-weight: 800; color: #fff; font-size: 16px; }
+      .marker-cluster-small { background: rgba(125,211,252,.65); border: 2px solid rgba(125,211,252,.95); }
+      .marker-cluster-medium { background: rgba(250,204,21,.65); border: 2px solid rgba(250,204,21,.95); }
+      .marker-cluster-large { background: rgba(248,113,113,.65); border: 2px solid rgba(248,113,113,.95); }
+      .marker-cluster { box-shadow: 0 8px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08); }
+      .marker-cluster:hover { transform: scale(1.04); transition: transform .18s ease; }
+
+      /* Gentle appear so re-clustering isn't jarring */
+      .leaflet-marker-icon, .marker-cluster {
+        animation: map-fade-in .18s ease both;
+      }
+      @keyframes map-fade-in {
+        from { opacity: 0; transform: scale(.96); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
+              fill="currentColor"
+            />
+          </svg>
+
+          <span class="title">LanternFly Quest</span>
+          <span class="pill">alpha</span>
         </div>
-
-        <!-- Account dropdown -->
-        <div class="account">
-          <button id="accountBtn" class="account-btn" aria-haspopup="true" aria-expanded="false"
-            aria-controls="accountMenu" title="Account">
-            <i class="bi bi-person-circle"></i>
-          </button>
-
-          <div id="accountMenu" class="account-menu" role="menu" aria-hidden="true">
-            <!-- Google Sign-In button lives inside the dropdown -->
-            <div class="g_id_signin" data-theme="filled_blue" data-size="large" data-shape="pill"
-              data-text="signin_with" data-logo_alignment="left">
-            </div>
-
-            <!-- Optional: a manual sign-out or profile area you toggle when logged in -->
-            <div class="signed-in hidden" id="signedInPanel">
-              <div class="profile-row">
-                <img id="avatar" alt="" />
-                <div class="who">
-                  <strong id="whoami">Signed in</strong>
-                  <div id="email" class="muted"></div>
-                </div>
-              </div>
-              <button id="logoutBtn" class="btn secondary" type="button">Log out</button>
-            </div>
+        <nav class="nav">
+          <a href="/">Home</a>
+          <a href="/info">Info</a>
+          <a href="/learn">Learn</a>
+          <a href="/report">Report</a>
+          <a href="/leaderboard">Leaderboard</a>
+        </nav>
+        <div class="auth">
+          <!-- g_id_onload contains Google Identity Services settings -->
+          <div
+            id="g_id_onload"
+            data-auto_prompt="false"
+            data-callback="handleCredentialResponse"
+            data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com"
+          ></div>
+          <!-- g_id_signin places the button on a page and supports customization -->
+          <div 
+            class="g_id_signin"
+            data-theme="filled_blue"
+            data-text="signup_with"
+          ></div>
+          <div id="authed" class="authed hidden">
+            <span id="whoami"></span>
+            <button id="logoutBtn" class="btn secondary">Log out</button>
           </div>
         </div>
       </div>
+    </header>
 
-    </div>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="container hero-inner">
-        <div>
-          <h1>Turn invasive pests into points.</h1>
-          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches,
-            compete on the leaderboard, and earn badges for real-world impact.</p>
-          <a href="#report" class="btn cta">Start Reporting</a>
+    <main>
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container hero-inner">
+          <div>
+            <h1>Turn invasive pests into points.</h1>
+            <p class="lead">
+              Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies.
+              Log catches, compete on the leaderboard, and earn badges for real-world impact.
+            </p>
+            <a href="#report" class="btn cta">Start Reporting</a>
+          </div>
+          <!-- Stats -->
+          <div class="hero-card" aria-hidden="true">
+            <div class="card stat">
+              <i class="bi bi-trophy"></i>
+              <span class="stat-label">Total Points</span>
+              <span id="statTotalPoints" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <i class="bi bi-fire"></i>
+              <span class="stat-label">Your Streak</span>
+              <span id="statStreak" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <i class="bi bi-bug"></i>
+              <span class="stat-label">Your Catches</span>
+              <span id="statCatches" class="stat-value">0</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -89,9 +182,17 @@
             <h2 style="margin:0">Recent lanternfly reports</h2>
             <button id="recenter" class="btn small">Recenter to Pittsburgh</button>
           </div>
+          <div id="map" role="region" aria-label="Lanternfly map"></div>
         </div>
-    </section>
-  </main>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>LanternFly Quest · v0.1</span>
+        <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
+      </div>
+    </footer>
 
     <!-- Bootstrap JS (unchanged) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -100,73 +201,129 @@
     <!-- Your main JS -->
     <script src="static/js/main.js"></script>
 
-  <!-- Latest compiled JavaScript -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Google Authentication Script -->
-  <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="static/js/main.js"></script>
-
-  <script>
-    // Dropdown open/close
-    (function () {
-      const btn = document.getElementById('accountBtn');
-      const menu = document.getElementById('accountMenu');
-
-      function openMenu() { menu.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); menu.setAttribute('aria-hidden', 'false'); }
-      function closeMenu() { menu.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); menu.setAttribute('aria-hidden', 'true'); }
-
-      btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.contains('open') ? closeMenu() : openMenu(); });
-      document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) closeMenu(); });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-    })();
-
-    // Hook into your existing Google callback to populate the profile area
-    function decodeJWT(token) {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(atob(base64).split("")
-        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
-      return JSON.parse(jsonPayload);
-    }
-
-    window.handleCredentialResponse = function (response) {
-      const p = decodeJWT(response.credential);
-      // Update simple UI
-      const signedPanel = document.getElementById('signedInPanel');
-      const who = document.getElementById('whoami');
-      const email = document.getElementById('email');
-      const avatar = document.getElementById('avatar');
-
-      if (who) who.textContent = p.name || 'Signed in';
-      if (email) email.textContent = p.email || '';
-      if (avatar) avatar.src = p.picture || '';
-
-      if (signedPanel) {
-        signedPanel.classList.remove('hidden');
-      }
-      // (Optional) hide the Google button after sign-in
-      const gid = document.querySelector('.g_id_signin');
-      if (gid) gid.style.display = 'none';
-
-      // TODO: your auth state/store goes here
-      console.log('Signed in:', p);
-    };
-
-    // Optional: basic "Log out" (client-side only; you may do server/session logic)
-    (function () {
-      const logout = document.getElementById('logoutBtn');
-      if (!logout) return;
-      logout.addEventListener('click', () => {
-        // Clear UI
-        const signedPanel = document.getElementById('signedInPanel');
-        if (signedPanel) signedPanel.classList.add('hidden');
-        const gid = document.querySelector('.g_id_signin');
-        if (gid) gid.style.display = 'inline-block';
-        console.log('Logged out (client-side). Implement real sign-out as needed.');
+    <!-- Map script -->
+    <script>
+      // Initialize map
+      const map = L.map("map", {
+        center: [40.44, -79.94], // Pittsburgh
+        zoom: 9,
+        scrollWheelZoom: true,
+        tap: false,
       });
-    })();
-  </script>
 
-</body>
+      // Basemap
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution:
+          '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
+      }).addTo(map);
 
+      // Recenter button
+      document.getElementById("recenter")?.addEventListener("click", () => {
+        map.setView([40.44, -79.94], 9);
+      });
+
+      // Marker clusters with tiered sizes
+      const clusters = L.markerClusterGroup({
+        maxClusterRadius: 60,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        disableClusteringAtZoom: 18,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          let sizeClass = "small";
+          if (count >= 50 && count < 200) sizeClass = "medium";
+          else if (count >= 200) sizeClass = "large";
+
+          return new L.DivIcon({
+            html: '<div><span>' + count + '</span></div>',
+            className: 'marker-cluster marker-cluster-' + sizeClass,
+            iconSize: L.point(
+              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30,
+              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30
+            )
+          });
+        }
+      });
+
+      // Robust CSV path resolution (works in common layouts)
+      const CSV_CANDIDATES = [
+        "static/data/lanternflydata.csv",   // when index.html is at site root
+        "../static/data/lanternflydata.csv",// when index.html is in /templates
+        "/static/data/lanternflydata.csv",  // absolute from site root (Flask default)
+        "../data/lanternflydata.csv"        // legacy fallback like map.html used
+      ];
+
+      async function fetchFirst(paths) {
+        const errs = [];
+        for (const p of paths) {
+          try {
+            const res = await fetch(p, { cache: "no-cache" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            console.log("[CSV] Loaded:", p, text.length, "bytes");
+            return text;
+          } catch (e) {
+            errs.push(p + " → " + e.message);
+          }
+        }
+        throw new Error("Could not load CSV from any path:\n" + errs.join("\n"));
+      }
+
+      const toNum = (v) =>
+        typeof v === "number" ? v : (typeof v === "string" ? Number(v.trim()) : NaN);
+
+      (async () => {
+        try {
+          const csvText = await fetchFirst(CSV_CANDIDATES);
+          const parsed = Papa.parse(csvText, { header: true, dynamicTyping: true, skipEmptyLines: true });
+          const rows = parsed.data || [];
+
+          if (!rows.length) {
+            console.warn("CSV loaded but empty.");
+            return;
+          }
+
+          // Be forgiving about column capitalization/aliases
+          const keyMap = Object.keys(rows[0]).reduce((acc, k) => { acc[k.toLowerCase()] = k; return acc; }, {});
+          const latK = keyMap["latitude"] || keyMap["lat"] || keyMap["y"];
+          const lngK = keyMap["longitude"] || keyMap["lon"] || keyMap["lng"] || keyMap["long"] || keyMap["x"];
+          const nameK = keyMap["name"];
+          const dateK = keyMap["date"];
+          const imgK  = keyMap["image"];
+
+          if (!latK || !lngK) {
+            console.error("CSV missing Latitude/Longitude columns.", { keys: Object.keys(rows[0]) });
+            return;
+          }
+
+          const markers = [];
+          for (const row of rows) {
+            const lat = toNum(row[latK]);
+            const lng = toNum(row[lngK]);
+            if (!isFinite(lat) || !isFinite(lng)) continue;
+
+            let html = "";
+            if (nameK && row[nameK]) html += `<b>${row[nameK]}</b><br/>`;
+            if (dateK && row[dateK]) html += `<i>${row[dateK]}</i><br/>`;
+            if (imgK  && row[imgK])  html += `<img src="${row[imgK]}" alt="${row[nameK] || "image"}" width="140" />`;
+
+            const m = L.marker([lat, lng], { opacity: 1 }).bindPopup(html || "Lanternfly report");
+            clusters.addLayer(m);
+            markers.push(m);
+          }
+
+          map.addLayer(clusters);
+
+          // Fit bounds to markers if present
+          if (markers.length > 0) {
+            const group = L.featureGroup(markers);
+            const bounds = group.getBounds();
+            if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+          }
+        } catch (err) {
+          console.error("[Map] Error loading CSV:", err.message);
+        }
+      })();
+    </script>
+  </body>
 </html>
