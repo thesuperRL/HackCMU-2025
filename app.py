@@ -17,6 +17,26 @@ accounts = Table("user", metadata, autoload_with=engine)
 def index():
     return render_template("index.html")
 
+@app.route("/info")
+def info():
+    return render_template("info.html")
+
+@app.route("/leaderboard")
+def leaderboard():
+    return render_template("leaderboard.html")
+
+@app.route("/learn")
+def learn():
+    return render_template("learn.html")
+
+@app.route("/map")
+def map():
+    return render_template("map.html")
+
+@app.route("/report")
+def report():
+    return render_template("report.html")
+
 @app.route("/send", methods=["POST"])
 def receive_data():
     data = request.get_json()
