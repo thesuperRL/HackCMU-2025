@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HackCMU 2025</title>
-
-  <!-- Icons & CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css" />
-</head>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Add Bootstrap Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <title>HackCMU 2025</title>
+    <link rel="stylesheet" href="static/css/style.css">
+  </head>
 <body>
 
   <header class="site-header">
@@ -69,7 +68,6 @@
             <span class="stat-label">Your Catches</span>
             <span id="statCatches" class="stat-value">0</span>
           </div>
-        </div>
       </div>
     </section>
   </main>
@@ -92,25 +90,8 @@
 
   <!-- Scripts (once) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Google Authentication Script -->
   <script src="https://accounts.google.com/gsi/client" async></script>
-  <script>
-    function decodeJWT(token) {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join("")
-      );
-      return JSON.parse(jsonPayload);
-    }
-    function handleCredentialResponse(response) {
-      const payload = decodeJWT(response.credential);
-      console.log("Signed in:", payload.name, payload.email);
-      // TODO: update UI with whoami, etc.
-    }
-  </script>
-  <script src="js/main.js"></script>
+  <script src="static/js/main.js"></script>
 </body>
 </html>

@@ -1,15 +1,12 @@
 function sendToFlask(jsonData) {
   fetch("/send", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ account_json: jsonData }),
   })
     .then((response) => response.json())
     .then((data) => {
-      document.getElementById("response").innerText = data.py_variable;
-      console.log("Status:", data.status);
+      console.log("Status:", data.py_variable);
     });
 }
 
@@ -40,10 +37,9 @@ function handleCredentialResponse(response) {
   console.log("  Profile image URL: " + responsePayload.picture);
   console.log("  Email: " + responsePayload.email);
 
-  sendLoginData(
-    "",
-    responsePayload.name,
-    responsePayload.email,
-    responsePayload.sub
-  );
+  sendToFlask({
+    name: responsePayload.name,
+    email: responsePayload.email,
+    id: responsePayload.sub,
+  });
 }
