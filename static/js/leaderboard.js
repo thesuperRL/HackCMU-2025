@@ -151,9 +151,12 @@ async function render() {
         tdRank.classList.add("user_self");
         tdRank.textContent = r.rank ?? "—";
 
-        tdUser = document.createElement("strong");
-        tdUser.classList.add("user_self");
-        tdUser.textContent = r.username;
+        tdUser = document.createElement("td");
+        tdUser.className = "user";
+        const nameElSelf = document.createElement("strong");
+        nameElSelf.className = "name user_self";
+        nameElSelf.textContent = r.username;
+        tdUser.appendChild(nameElSelf);
 
         tdC = document.createElement("td");
         tdC.classList.add("user_self");
@@ -165,8 +168,12 @@ async function render() {
         tdRank.className = "rank";
         tdRank.textContent = r.rank ?? "—";
 
-        tdUser = document.createElement("strong");
-        tdUser.textContent = r.username;
+        tdUser = document.createElement("td");
+        tdUser.className = "user";
+        const nameEl = document.createElement("strong");
+        nameEl.className = "name";
+        nameEl.textContent = r.username;
+        tdUser.appendChild(nameEl);
 
         tdC = document.createElement("td");
         tdC.textContent = r.catches ?? 0;

@@ -52,6 +52,7 @@
         width: 100%;
         border-collapse: collapse;
       }
+      tbody td { vertical-align: middle; }
       thead th {
         text-align: left;
         font-weight: 800;
@@ -82,6 +83,15 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        white-space: nowrap; /* keep on one line */
+        min-width: 0; /* allow child to shrink */
+      }
+      .user .name {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+        max-width: 100%;
       }
       .avatar {
         width: 32px;
