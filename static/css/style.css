@@ -15,27 +15,7 @@
   --radius-lg: 14px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f8fafc;
-    --bg-elev: #ffffff;
-    --card: #ffffff;
-    --fg: #0b1020;
-    --muted: #576181;
-    --accent: #0284c7;
-    --accent-2: #059669;
-    --danger: #dc2626;
-    --pill: #7c3aed;
-    --ring: rgba(2, 132, 199, .25);
-  }
-
-  body {
-    background-image:
-      radial-gradient(1200px 600px at 70% -10%, #e0f2fe 0, transparent 60%),
-      radial-gradient(1200px 600px at -20% 40%, #dcfce7 0, transparent 55%);
-    background-repeat: no-repeat, no-repeat;
-  }
-}
+/* Light mode overrides removed to keep a consistent dark theme */
 
 * {
   box-sizing: border-box;
@@ -55,6 +35,10 @@ body {
     radial-gradient(1200px 600px at -20% 40%, #10b981 0, rgba(16, 185, 129, .0) 55%),
     var(--bg);
   background-repeat: no-repeat, no-repeat;
+  /* Sticky footer layout */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -365,6 +349,10 @@ select:focus {
   color: var(--muted);
   font-weight: 700;
 }
+
+/* Sticky footer: keep footer pinned to bottom when content is short */
+main { flex: 1 0 auto; }
+.site-footer { margin-top: auto; }
 
 /* ---------- Animations & micro-interactions ---------- */
 @keyframes pop {

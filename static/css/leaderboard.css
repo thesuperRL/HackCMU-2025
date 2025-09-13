@@ -1,4 +1,4 @@
-/* ========== Design tokens (light mode) ========== */
+/* ========== Design tokens ========== */
 :root {
   --bg: #0b1220;
   --bg-elev: #11182a;
@@ -16,17 +16,7 @@
   --shadow-2: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f7fafc;
-    --bg-elev: #ffffff;
-    --fg: #0f172a;
-    --muted: #4b5563;
-    --ring: rgba(59, 130, 246, 0.25);
-    --shadow-1: 0 6px 16px rgba(0, 0, 0, 0.08);
-    --shadow-2: 0 12px 28px rgba(0, 0, 0, 0.12);
-  }
-}
+/* Light mode overrides removed to keep a consistent dark theme */
 
 /* ========== Base ========== */
 * {
