@@ -5,6 +5,12 @@ import base64
 import re
 from datetime import datetime, timezone
 from PIL import Image
+import numpy as np
+from tensorflow.keras.models import load_model
+import cv2
+from tensorflow.keras.preprocessing import image
+from ultralytics import YOLO
+import matplotlib.pyplot as plt
 
 from sqlalchemy import create_engine, text, select, insert, update, MetaData, Table, exists
 from sqlalchemy.orm import sessionmaker
@@ -205,7 +211,47 @@ def submit_report():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+    
+model1 = YOLO("yolov5s.pt")   
+def crop_objects(image_path, conf_thresh=0.5):
+    """
+    Returns cropped objects as a list of NumPy arrays (in memory)
+    """
+    img = cv2.imread(image_path)
+    results = model1(image_path)[0]  # get predictions
 
+    cropped_images = []
+    for i, box in enumerate(results.boxes.xyxy):
+        conf = results.boxes.conf[i].item()
+        if conf < conf_thresh:
+            continue  # skip low-confidence boxes
+        x1, y1, x2, y2 = map(int, box)
+        crop = img[y1:y2, x1:x2]
+        cropped_images.append(crop)  # keep in memory
+
+    return cropped_images
+# Load your trained model once at startup
+model = load_model("my_trained_model.h5")
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    # Ensure a file was uploaded
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    crops = crop_objects("file", conf_thresh=0.25)
+    if(len(crops)==0):
+        predicted_class=1
+    else:
+        resized = cv2.resize(crops[0], (224, 224))
+        img_array = np.expand_dims(resized / 255.0, axis=0)  # normalize & add batch dim
+        # Make prediction
+        pred = model.predict(img_array)
+        predicted_class = np.argmax(pred, axis=1)[0]
+        confidence = pred[0][predicted_class]
+        if(predicted_class==0 and confidence<0.9):
+            predicted_class=1
+    return jsonify({ "class": predicted_class, "confidence": confidence})
 if __name__ == "__main__":
     app.run(debug=True)
 
