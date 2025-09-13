@@ -6,7 +6,7 @@ function sendToFlask(jsonData) {
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log("Status:", data.py_variable);
+      console.log("Status:", data.status);
     });
 }
 
@@ -28,14 +28,6 @@ function handleCredentialResponse(response) {
   console.log("Encoded JWT ID token: " + response.credential);
 
   const responsePayload = decodeJWT(response.credential);
-
-  console.log("Decoded JWT ID token fields:");
-  console.log("  Full Name: " + responsePayload.name);
-  console.log("  Given Name: " + responsePayload.given_name);
-  console.log("  Family Name: " + responsePayload.family_name);
-  console.log("  Unique ID: " + responsePayload.sub);
-  console.log("  Profile image URL: " + responsePayload.picture);
-  console.log("  Email: " + responsePayload.email);
 
   sendToFlask({
     name: responsePayload.name,
