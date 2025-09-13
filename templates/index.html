@@ -1,173 +1,160 @@
+<!-- File: index.html -->
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LanternFly Quest — HackCMU 2025</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HackCMU 2025 · LanternFly Quest</title>
 
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+  <!-- Icons & site styles -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="../static/css/style.css"/>
 
-    <!-- Leaflet -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+  <!-- Leaflet core -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
-    <!-- MarkerCluster plugin -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- MarkerCluster plugin -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- jQuery + PapaParse -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+  <!-- PapaParse (CSV) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
 
-    <!-- Site CSS (Flask static) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <!-- Page-local styles for the map (scoped, won't fight your theme) -->
+  <style>
+    /* Map box inside your themed containers */
+    #map {
+      width: 100%;
+      height: 70vh;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.06);
+      background: #0d1326;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    @media (max-width: 900px){ #map { height: 60vh; } }
 
-    <style>
-      :root { --container-max: 1100px; }
-      * { box-sizing: border-box; }
+    /* Prevent white flashes between tiles */
+    .leaflet-container { background: #0d1326; }
+    .leaflet-tile { background-color: #0d1326 !important; }
 
-      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111; }
-      .container { max-width: var(--container-max); margin: 0 auto; padding: 0 16px; }
+    /* Cluster visuals (kept from your working file) */
+    .marker-cluster { 
+      box-shadow: 0 8px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .marker-cluster-small {
+      background: rgba(97, 175, 254, 0.6);
+      border: 2px solid rgba(97, 175, 254, 0.9);
+    }
+    .marker-cluster-small div {
+      width: 30px; height: 30px; line-height: 30px;
+      border-radius: 50%;
+      text-align: center; font-weight: 700; color: #fff;
+    }
 
-      /* Header */
-      .site-header { border-bottom: 1px solid #eee; background: #fff; position: sticky; top: 0; z-index: 50; }
-      .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-      .brand .logo { width: 28px; height: 28px; color: #28a; }
-      .pill { font-size: 12px; padding: 2px 6px; border: 1px solid #ddd; border-radius: 999px; color: #666; }
+    .marker-cluster-medium {
+      background: rgba(255, 165, 0, 0.6);
+      border: 2px solid rgba(255, 165, 0, 0.9);
+    }
+    .marker-cluster-medium div {
+      width: 44px; height: 44px; line-height: 44px;
+      border-radius: 50%;
+      text-align: center; font-weight: 700; color: #fff; font-size: 14px;
+    }
 
-      .nav { display: flex; gap: 14px; }
-      .nav a { text-decoration: none; color: #333; font-weight: 500; }
-      .nav a:hover { color: #000; }
+    .marker-cluster-large {
+      background: rgba(220, 53, 69, 0.6);
+      border: 2px solid rgba(220, 53, 69, 0.9);
+    }
+    .marker-cluster-large div {
+      width: 60px; height: 60px; line-height: 60px;
+      border-radius: 50%;
+      text-align: center; font-weight: 800; color: #fff; font-size: 16px;
+    }
 
-      .auth { display: flex; align-items: center; gap: 10px; }
-      .hidden { display: none !important; }
+    /* Harmonize Leaflet UI with your theme */
+    .leaflet-control-attribution,
+    .leaflet-control-scale {
+      background: rgba(17,23,45,.75);
+      color: #9aa4c7;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 2px 6px;
+      backdrop-filter: blur(6px);
+    }
+    .leaflet-bar a, .leaflet-bar a:hover {
+      background: rgba(17,23,45,.85);
+      color: #eef2ff;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .leaflet-bar a:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
 
-      /* Hero */
-      .hero { padding: 48px 0 8px; background: #f9fcff; border-bottom: 1px solid #eef5ff; }
-      .hero-inner { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center; }
-      .lead { color: #333; max-width: 50ch; }
-      .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
-      .btn.cta { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
-      .btn.secondary { background: #f5f5f5; }
-      .btn.small { padding: 6px 10px; font-size: 0.9rem; }
+  <!-- Header (non-map code preserved) -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z" fill="currentColor"/>
+        </svg>
+        <span class="title">LanternFly Quest</span>
+        <span class="pill">alpha</span>
+      </div>
 
-      .hero-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-      .card.stat { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 14px; display: grid; gap: 6px; }
-      .card.stat i { font-size: 20px; color: #0ea5e9; }
-      .stat-label { font-size: 12px; color: #666; }
-      .stat-value { font-size: 20px; font-weight: 700; }
-
-      /* Map section */
-      .map-section { padding: 24px 0 48px; }
-      .map-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
-      #map { width: 100%; height: 70vh; border-radius: 14px; overflow: hidden; border: 1px solid #e6e6e6; }
-
-      /* Footer */
-      .site-footer { border-top: 1px solid #eee; background: #fff; }
-      .footer-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
-
-      /* Error banner */
-      .error-banner {
-        position: fixed; left: 0; right: 0; top: 0; padding: 10px 14px;
-        background: #fee; border-bottom: 1px solid #f99; color: #900;
-        font: 14px/1.3 system-ui; z-index: 9999;
-      }
-
-      /* Custom cluster styles */
-      .marker-cluster-small {
-        background: rgba(97,175,254,0.6);
-        border: 2px solid rgba(97,175,254,0.9);
-      }
-      .marker-cluster-small div {
-        width: 30px; height: 30px; line-height: 30px; border-radius: 50%;
-        text-align: center; font-weight: 700; color: #fff;
-      }
-
-      .marker-cluster-medium {
-        background: rgba(255,165,0,0.6);
-        border: 2px solid rgba(255,165,0,0.9);
-      }
-      .marker-cluster-medium div {
-        width: 44px; height: 44px; line-height: 44px; border-radius: 50%;
-        text-align: center; font-weight: 700; color: #fff; font-size: 14px;
-      }
-
-      .marker-cluster-large {
-        background: rgba(220,53,69,0.6);
-        border: 2px solid rgba(220,53,69,0.9);
-      }
-      .marker-cluster-large div {
-        width: 60px; height: 60px; line-height: 60px; border-radius: 50%;
-        text-align: center; font-weight: 800; color: #fff; font-size: 16px;
-      }
-
-      @media (max-width: 900px) {
-        .hero-inner { grid-template-columns: 1fr; }
-        #map { height: 60vh; }
-      }
-    </style>
-  </head>
-
-  <body>
-    <!-- Header -->
-    <header class="site-header">
-      <div class="container header-inner">
-        <div class="brand">
-          <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
-              fill="currentColor"
-            />
-          </svg>
-          <span class="title">LanternFly Quest</span>
-          <span class="pill">alpha</span>
-        </div>
-
-        <nav class="nav">
+      <nav class="nav">
           <a href="/">Home</a>
-          <a href="/info">Info</a>
+          <a href="/info">About</a>
           <a href="/learn">Learn</a>
           <a href="/report">Report</a>
           <a href="/leaderboard">Leaderboard</a>
-        </nav>
+      </nav>
 
-        <div class="auth">
-          <div
-            id="g_id_onload"
-            data-auto_prompt="false"
-            data-callback="handleCredentialResponse"
-            data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com"
-          ></div>
-          <div class="g_id_signin" data-theme="filled_blue" data-text="signup_with"></div>
-          <div id="authed" class="authed hidden">
-            <span id="whoami"></span>
-            <button id="logoutBtn" class="btn secondary">Log out</button>
-          </div>
+      <div class="auth">
+        <!-- Google Identity (optional) -->
+        <div
+          id="g_id_onload"
+          data-auto_prompt="false"
+          data-callback="handleCredentialResponse"
+          data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com">
+        </div>
+        <div class="g_id_signin" data-theme="filled_blue" data-text="signup_with"></div>
+
+        <div id="authed" class="authed hidden">
+          <span id="whoami"></span>
+          <button id="logoutBtn" class="btn secondary">Log out</button>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
+  <!-- Main (hero + stats + map) -->
   <main>
+    <!-- Hero -->
     <section class="hero">
       <div class="container hero-inner">
         <div>
           <h1>Turn invasive pests into points.</h1>
-          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches, compete on the leaderboard, and earn badges for real-world impact.</p>
+          <p class="lead">
+            Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies.
+            Log catches, compete on the leaderboard, and earn badges for real-world impact.
+          </p>
+          <!-- anchor matches the map section id below -->
           <a href="#report" class="btn cta">Start Reporting</a>
         </div>
-        <!-- Updated hero-card with icons -->
+
         <div class="hero-card" aria-hidden="true">
           <div class="card stat">
             <i class="bi bi-trophy"></i>
@@ -184,22 +171,147 @@
             <span class="stat-label">Your Catches</span>
             <span id="statCatches" class="stat-value">0</span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Map section -->
+    <section class="section" id="report">
+      <div class="container">
+        <div class="stat" style="grid-template-columns: 1fr auto; margin-bottom: 12px;">
+          <h2 style="margin:0">Recent lanternfly reports</h2>
+          <button id="recenter" class="btn small">Recenter to Pittsburgh</button>
+        </div>
+        <div id="map" role="region" aria-label="Lanternfly map"></div>
+        <div id="mapError" style="margin-top:8px;color:#f87171;font-weight:700;display:none"></div>
       </div>
     </section>
   </main>
 
-    <!-- Footer -->
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <span>LanternFly Quest · v0.1</span>
-        <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
-      </div>
-    </footer>
+  <!-- Footer (non-map code preserved) -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>LanternFly Quest · v0.1</span>
+      <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
+    </div>
+  </footer>
 
-  <!-- Latest compiled JavaScript -->
+  <!-- Site scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Google Authentication Script -->
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script src="static/js/main.js"></script>
+
+  <!-- Map script (using your working map logic) -->
+  <script>
+    // --------- Config ----------
+    // Serve your CSV at this path relative to index.html
+    const CSV_URL = "static/data/lanternflydata.csv";
+
+    const showMapError = (msg) => {
+      const el = document.getElementById("mapError");
+      el.textContent = msg;
+      el.style.display = "block";
+    };
+
+    // --------- Map ----------
+    var map = L.map('map', {
+      center: [40.44, -79.94], // Pittsburgh
+      zoom: 9,
+      scrollWheelZoom: true,
+      tap: false
+    });
+
+    // Basemap
+    var light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, ' +
+        '&copy; <a href="https://carto.com/attribution">CARTO</a>'
+    }).addTo(map);
+
+    // Recenter button
+    document.getElementById("recenter")?.addEventListener("click", () => {
+      map.setView([40.44, -79.94], 9);
+    });
+
+    // Cluster group with tiered icon sizes (from your working file)
+    // - small: < 50 points
+    // - medium: 50–199 points
+    // - large: 200+ points
+    var clusters = L.markerClusterGroup({
+      maxClusterRadius: 60,           // how close points must be to cluster (px)
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 18,
+      iconCreateFunction: function (cluster) {
+        var count = cluster.getChildCount();
+        var sizeClass = 'small';
+        if (count >= 50 && count < 200) sizeClass = 'medium';
+        else if (count >= 200) sizeClass = 'large';
+
+        // Log cluster info for debugging
+        console.log('Cluster created:', { count, sizeClass });
+
+        // Create a DivIcon with our custom class
+        return new L.DivIcon({
+          html: '<div><span>' + count + '</span></div>',
+          className: 'marker-cluster marker-cluster-' + sizeClass,
+          iconSize: L.point(
+            sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30,
+            sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30
+          )
+        });
+      }
+    });
+
+    // --------- Data load (PapaParse) ----------
+    (async () => {
+      try {
+        const res = await fetch(CSV_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`CSV HTTP ${res.status}`);
+        const csvString = await res.text();
+
+        console.log("got data");
+        const parsed = Papa.parse(csvString, { header: true, dynamicTyping: true });
+        const data = parsed.data || [];
+
+        for (var i = 0; i < data.length; i++) {
+          var row = data[i];
+
+          // Debugging: print the entire row object
+          console.log("Row " + i + ":", row);
+
+          // Skip empty rows (PapaParse sometimes adds an extra)
+          if (!row || !row.Latitude || !row.Longitude) {
+            console.log("Skipping row", i, "because of missing coordinates");
+            continue;
+          }
+
+          // Build popup content (kept from your original)
+          var popupContent = `<b>${row.Name || 'Sighting'}</b><br>`;
+          if (row.Date)  popupContent += `<i>${row.Date}</i><br>`;
+          if (row.Image) popupContent += `<img src="${row.Image}" alt="${row.Name || 'Lanternfly'}" width="120" />`;
+          console.log("Popup content for row " + i + ":", popupContent);
+
+          // Create marker and add to clusters
+          var marker = L.marker([row.Latitude, row.Longitude], { opacity: 1 }).bindPopup(popupContent);
+          clusters.addLayer(marker);
+        }
+
+        // Add cluster layer to map once all markers are added
+        map.addLayer(clusters);
+
+        // Fit bounds of all points if we have any
+        if (clusters.getLayers().length > 0) {
+          var bounds = clusters.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds.pad(0.1));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading CSV:", err);
+        showMapError("Could not load data. Check CSV path and that you’re serving over http(s).");
+      }
+    })();
+  </script>
 </body>
 </html>
