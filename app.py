@@ -37,6 +37,10 @@ def map():
 def report():
     return render_template("report.html")
 
+@app.route("/achievements")
+def achievements():
+    return render_template("achievements.html")
+
 @app.route("/send", methods=["POST"])
 def receive_data():
     data = request.get_json()

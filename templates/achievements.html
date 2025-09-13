@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Achievements · LanternFly Quest</title>
+
+  <!-- Icons & theme -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Page-scoped styles (kept minimal; won’t conflict with your CSS) -->
+  <style>
+    .achv-hero {
+      padding: 48px 0 16px;
+      background: radial-gradient(1200px 400px at 30% -10%, rgba(14,165,233,.20), transparent 60%),
+                  radial-gradient(800px 320px at 85% -5%, rgba(99,102,241,.14), transparent 60%);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .achv-summary {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+    .achv-kicker { color: var(--muted); margin: 0 }
+    .achv-total { font-weight: 800; font-size: 1.5rem; margin: 0 }
+
+    .achv-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 16px;
+    }
+    @media (max-width: 1100px) { .achv-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 780px)  { .achv-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 520px)  { .achv-grid { grid-template-columns: 1fr; } }
+
+    .achv-card {
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-xl, 20px);
+      padding: 16px;
+      box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03));
+      display: grid; gap: 10px;
+    }
+    .achv-head {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .achv-badge {
+      width: 44px; height: 44px;
+      display: grid; place-items: center;
+      border-radius: 12px;
+      background: rgba(14,165,233,.15);
+      border: 1px solid rgba(14,165,233,.35);
+      color: #7dd3fc;
+      font-size: 22px;
+    }
+    .achv-title {
+      font-weight: 800; margin: 0;
+    }
+    .achv-status {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 999px; font-weight: 800; font-size: .85rem;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .achv-earned   { background: rgba(34,197,94,.15); color: #86efac; border-color: rgba(34,197,94,.35); }
+    .achv-locked   { background: rgba(15,23,42,.55); color: var(--muted); }
+    .achv-desc     { color: var(--muted); margin: 0; }
+
+    .achv-progress {
+      height: 10px; border-radius: 999px; background: rgba(255,255,255,.08);
+      overflow: hidden; border: 1px solid rgba(255,255,255,.1);
+    }
+    .achv-progress > div {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #34d399, #0ea5e9);
+      transition: width .4s ease;
+    }
+    .achv-req {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .92rem; color: var(--muted);
+    }
+    .achv-req strong { color: var(--fg); }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z" fill="currentColor"/>
+        </svg>
+        <span class="title">LanternFly Quest</span>
+        <span class="pill">alpha</span>
+      </div>
+
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/info">Info</a>
+        <a href="/learn">Learn</a>
+        <a href="/report">Report</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="/achievements">Achievements</a>
+      </nav>
+
+      <div class="auth">
+        <div id="g_id_onload"
+             data-auto_prompt="false"
+             data-callback="handleCredentialResponse"
+             data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com"></div>
+        <div class="g_id_signin" data-theme="filled_blue" data-text="signup_with"></div>
+        <div id="authed" class="authed hidden">
+          <span id="whoami"></span>
+          <button id="logoutBtn" class="btn secondary">Log out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="achv-hero">
+    <div class="container">
+      <h1 style="margin:0 0 6px 0;">Achievements</h1>
+      <p class="achv-kicker">Earn badges as you help control spotted lanternflies.</p>
+    </div>
+  </section>
+
+  <!-- Achievements grid -->
+  <main class="section">
+    <div class="container">
+      <div class="achv-summary">
+        <p class="achv-kicker">Your total catches</p>
+        <p class="achv-total"><span id="achvCatches">0</span> <span style="color:var(--muted);font-weight:600;">flies</span></p>
+      </div>
+
+      <div id="achievements" class="achv-grid" aria-live="polite"></div>
+
+      <div id="achvHint" style="margin-top:14px;color:var(--muted);font-size:.95rem">
+        Tip: this page checks <code>window.App.stats.catches</code>, then <code>localStorage</code> (<code>LFQ_CATCHES</code>, <code>catches</code>, or <code>demo.catches</code>).  
+        For quick testing, add <code>?catches=25</code> to the URL.
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>LanternFly Quest · v0.1</span>
+    </div>
+  </footer>
+
+  <!-- Optional: Bootstrap & Google Identity (if used globally) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+
+  <!-- Your app JS (if it exposes App.stats etc.) -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+  <script>
+    // --- Config your badges here ---
+    const ACHIEVEMENTS = [
+      { id: 'first-blood',    title: 'First Catch',      req: 1,    icon: '🐞', color: '#34d399' },
+      { id: 'tenacious',      title: 'Tenacious Ten',    req: 10,   icon: '🔥', color: '#f59e0b' },
+      { id: 'field-agent',    title: 'Field Agent',      req: 25,   icon: '🕵️', color: '#7dd3fc' },
+      { id: 'neighborhood',   title: 'Neighborhood Hero',req: 50,   icon: '🏘️', color: '#a78bfa' },
+      { id: 'centurion',      title: 'Centurion',        req: 100,  icon: '💯', color: '#ef4444' },
+      { id: 'ranger',         title: 'Urban Ranger',     req: 250,  icon: '🌆', color: '#10b981' },
+      { id: 'exterminator',   title: 'Exterminator',     req: 500,  icon: '⚔️', color: '#22d3ee' },
+      { id: 'legend',         title: 'Legend of Pittsburgh', req: 1000, icon: '🏆', color: '#fde047' },
+    ];
+
+    // --- Get catches from multiple possible sources ---
+    function getCatchesFromURL() {
+      const m = location.search.match(/[?&]catches=(\d+)/i);
+      return m ? parseInt(m[1], 10) : null;
+    }
+    function getCatchesFromLocalStorage() {
+      const keys = ['LFQ_CATCHES', 'catches', 'demo.catches'];
+      for (const k of keys) {
+        const v = localStorage.getItem(k);
+        if (v != null && !isNaN(Number(v))) return Number(v);
+      }
+      return null;
+    }
+    function getCatchesFromApp() {
+      try {
+        const v = window.App?.stats?.catches ?? window.App?.user?.catches;
+        if (v != null && !isNaN(Number(v))) return Number(v);
+      } catch(_) {}
+      return null;
+    }
+    function getCatches() {
+      return getCatchesFromApp()
+          ?? getCatchesFromLocalStorage()
+          ?? getCatchesFromURL()
+          ?? 0;
+    }
+
+    // --- Render helpers ---
+    function makeCard(a, catches) {
+      const earned = catches >= a.req;
+      const pct = Math.max(0, Math.min(100, Math.floor((catches / a.req) * 100)));
+
+      const card = document.createElement('div');
+      card.className = 'achv-card';
+      card.setAttribute('data-earned', earned ? '1' : '0');
+
+      card.innerHTML = `
+        <div class="achv-head">
+          <div class="achv-badge" style="background: linear-gradient(180deg, ${a.color}33, ${a.color}22); border-color: ${a.color}66">
+            <span role="img" aria-label="badge">${a.icon}</span>
+          </div>
+          <div>
+            <h3 class="achv-title">${a.title}</h3>
+            <p class="achv-desc">Catch ${a.req.toLocaleString()} spotted lanternfl${a.req === 1 ? 'y' : 'ies'}.</p>
+          </div>
+          <span class="achv-status ${earned ? 'achv-earned' : 'achv-locked'}">
+            ${earned ? '<i class="bi bi-check-circle"></i> Earned' : '<i class="bi bi-lock"></i> Locked'}
+          </span>
+        </div>
+
+        <div class="achv-progress" aria-hidden="true"><div style="width:${pct}%"></div></div>
+
+        <div class="achv-req">
+          <span>Progress</span>
+          <span><strong>${Math.min(catches, a.req).toLocaleString()}</strong> / ${a.req.toLocaleString()}</span>
+        </div>
+      `;
+      return card;
+    }
+
+    // --- Bootstrap the page ---
+    (function initAchievements(){
+      const catches = getCatches();
+      document.getElementById('achvCatches').textContent = catches.toLocaleString();
+
+      const grid = document.getElementById('achievements');
+      grid.innerHTML = '';
+
+      // Sort by requirement ascending, render
+      ACHIEVEMENTS.sort((a,b) => a.req - b.req).forEach(a => {
+        grid.appendChild(makeCard(a, catches));
+      });
+    })();
+  </script>
+</body>
+</html>
