@@ -530,6 +530,8 @@ function initMapIfPresent() {
       if (!document.hidden) refreshData();
     });
   }
+
+  refreshData();
 }
 
 // Ensure pages that include only main.js still initialize the map
@@ -538,5 +540,3 @@ try {
 } catch (e) {
   console.warn("Map initialization failed:", e);
 }
-
-refreshData();
