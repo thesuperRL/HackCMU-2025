@@ -147,6 +147,7 @@ def submit_report():
         lon = float(data.get("longitude"))
         image = data.get("image") or ""
         raw_ts = (data.get("timestamp") or "").strip()
+        uid = data.get("uid")
 
         def parse_iso(ts: str) -> str:
             if not ts:
@@ -168,9 +169,6 @@ def submit_report():
         # Start with client timestamp (may be empty)
         client_date_iso = parse_iso(raw_ts)
         date_iso = client_date_iso
-
-        csv_path = os.path.join(app.root_path, "static", "data", "lanternflydata.csv")
-        file_exists = os.path.exists(csv_path)
 
         # If image is a data URL, persist it to static/uploads and store the file path instead
         if image.startswith("data:image"):
@@ -225,31 +223,18 @@ def submit_report():
                     # fallback: keep original string if something goes wrong
                     pass
 
-        size = os.path.getsize(csv_path) if file_exists else 0
-        with open(csv_path, mode="a", newline="", encoding="utf-8") as f:
-            # Ensure previous file ends with a newline before appending
-            if size > 0:
-                try:
-                    with open(csv_path, mode="rb") as fr:
-                        fr.seek(-1, os.SEEK_END)
-                        last = fr.read(1)
-                    if last not in (b"\n", b"\r"):
-                        f.write("\n")
-                except Exception:
-                    pass
+        insert_stmt = insert(maps).values(
+            name = name,
+            longitude = lon,
+            latitude = lat,
+            image_link = image,
+            date = raw_ts,
+            uid = uid,
+        )
 
-            writer = csv.writer(f)
-            if size == 0:
-                writer.writerow(["Name", "Email", "Longitude", "Latitude", "Image", "Date"])
-            # Ensure we always store a non-empty date; fallback to now in UTC
-            final_date = date_iso or datetime.now(tz=timezone.utc).isoformat()
-            writer.writerow([name, email, lon, lat, image, final_date])
-            # Force contents to disk to avoid race with immediate readers
-            try:
-                f.flush()
-                os.fsync(f.fileno())
-            except Exception:
-                pass
+        with engine.begin() as conn:
+            conn.execute(insert_stmt)
+            print(f"Inserted row {index} with name: {name}")
 
         return jsonify({"status": "ok"})
     except Exception as e:

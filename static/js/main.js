@@ -177,7 +177,13 @@ async function updateHomeStats() {
   if (!rankEl && !streakEl && !catchesEl) return;
 
   const getLocalScores = () => {
-    try { const raw = localStorage.getItem("lfq:scores"); const arr = raw? JSON.parse(raw): []; return Array.isArray(arr)? arr: []; } catch { return []; }
+    try {
+      const raw = localStorage.getItem("lfq:scores");
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
   };
   let rows = [];
   try {
@@ -188,7 +194,9 @@ async function updateHomeStats() {
     });
     const data = await resp.json();
     rows = Array.isArray(data) ? data : [];
-  } catch { rows = []; }
+  } catch {
+    rows = [];
+  }
 
   const local = getLocalScores();
   // Merge local with server, prefer local catches for current user
@@ -209,33 +217,50 @@ async function updateHomeStats() {
   rows = Array.from(byUid.values());
 
   // sort by catches desc to compute rank
-  rows.sort((a,b)=>{
-    const av = a.catches??0, bv = b.catches??0;
-    if (av!==bv) return bv-av; // desc
-    const an = (a.username||"").toLowerCase();
-    const bn = (b.username||"").toLowerCase();
+  rows.sort((a, b) => {
+    const av = a.catches ?? 0,
+      bv = b.catches ?? 0;
+    if (av !== bv) return bv - av; // desc
+    const an = (a.username || "").toLowerCase();
+    const bn = (b.username || "").toLowerCase();
     return an.localeCompare(bn);
   });
 
-  const cur = (()=>{ try{ return JSON.parse(localStorage.getItem("lfq.user")||"null"); }catch{return null;} })();
+  const cur = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("lfq.user") || "null");
+    } catch {
+      return null;
+    }
+  })();
   const uid = cur && cur.uid;
-  let my = null; let myRank = 0;
+  let my = null;
+  let myRank = 0;
   if (uid) {
-    for (let i=0;i<rows.length;i++) if (rows[i].uid===uid) { my = rows[i]; myRank = i+1; break; }
+    for (let i = 0; i < rows.length; i++)
+      if (rows[i].uid === uid) {
+        my = rows[i];
+        myRank = i + 1;
+        break;
+      }
   } else if (local.length) {
     // guest: take the latest entry (most recently updated) by order in storage
-    my = local[local.length-1];
-    myRank = rows.findIndex(r=>r.uid===my.uid)+1 || 0;
+    my = local[local.length - 1];
+    myRank = rows.findIndex((r) => r.uid === my.uid) + 1 || 0;
   }
 
   if (rankEl) rankEl.textContent = myRank || 0;
-  if (streakEl) streakEl.textContent = (my && my.streak) ? my.streak : 0;
-  if (catchesEl) catchesEl.textContent = (my && my.catches) ? my.catches : 0;
+  if (streakEl) streakEl.textContent = my && my.streak ? my.streak : 0;
+  if (catchesEl) catchesEl.textContent = my && my.catches ? my.catches : 0;
 }
 
 // Update on load and when local scores change
-try { updateHomeStats(); } catch {}
-window.addEventListener("storage", (e)=>{ if (e.key==="lfq:scores") updateHomeStats(); });
+try {
+  updateHomeStats();
+} catch {}
+window.addEventListener("storage", (e) => {
+  if (e.key === "lfq:scores") updateHomeStats();
+});
 document.addEventListener("lfq:scores-updated", updateHomeStats);
 
 // MAP ==============================
@@ -257,17 +282,23 @@ function initMapIfPresent() {
     zoom: 4,
     scrollWheelZoom: true,
     tap: false,
-    maxBounds: [[-85, -180], [85, 180]],
+    maxBounds: [
+      [-85, -180],
+      [85, 180],
+    ],
     maxBoundsViscosity: 1.0,
     minZoom: 3,
     maxZoom: 19,
   });
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
-    noWrap: true,
-  }).addTo(map);
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
+      noWrap: true,
+    }
+  ).addTo(map);
 
   // Controls
   document.getElementById("centerPghBtn")?.addEventListener("click", () => {
@@ -277,7 +308,9 @@ function initMapIfPresent() {
     map.setView([39.8283, -98.5795], 4);
   });
   document.getElementById("refreshMapBtn")?.addEventListener("click", () => {
-    try { refreshData && refreshData(); } catch {}
+    try {
+      refreshData && refreshData();
+    } catch {}
   });
 
   const clusters = L.markerClusterGroup({
@@ -292,9 +325,14 @@ function initMapIfPresent() {
       else if (count >= 200) sizeClass = "large";
       let hasMine = false;
       try {
-        hasMine = cluster.getAllChildMarkers().some(m => m && m.options && m.options.isMine);
+        hasMine = cluster
+          .getAllChildMarkers()
+          .some((m) => m && m.options && m.options.isMine);
       } catch {}
-      const classes = "marker-cluster marker-cluster-" + sizeClass + (hasMine ? " has-mine" : "");
+      const classes =
+        "marker-cluster marker-cluster-" +
+        sizeClass +
+        (hasMine ? " has-mine" : "");
       return new L.DivIcon({
         html: "<div><span>" + count + "</span></div>",
         className: classes,
@@ -308,20 +346,32 @@ function initMapIfPresent() {
 
   function addRows(rows) {
     // Rebuild markers each time based on fresh table data
-    try { clusters.clearLayers(); } catch {}
+    try {
+      clusters.clearLayers();
+    } catch {}
     let currentUserName = null;
     let currentUserEmail = null;
     try {
-      const u = JSON.parse(localStorage.getItem('lfq.user') || 'null');
-      if (u) { currentUserName = (u.name||'').toLowerCase(); currentUserEmail = (u.email||'').toLowerCase(); }
+      const u = JSON.parse(localStorage.getItem("lfq.user") || "null");
+      if (u) {
+        currentUserName = (u.name || "").toLowerCase();
+        currentUserEmail = (u.email || "").toLowerCase();
+      }
     } catch {}
     // Pull the last report context for accurate popup targeting
-    let lr = null; let lrTs = null; let reportedMarker = null;
-    try { lr = JSON.parse(localStorage.getItem('lfq.lastReport') || 'null'); lrTs = lr?.timestamp || null; } catch {}
+    let lr = null;
+    let lrTs = null;
+    let reportedMarker = null;
+    try {
+      lr = JSON.parse(localStorage.getItem("lfq.lastReport") || "null");
+      lrTs = lr?.timestamp || null;
+    } catch {}
 
-    function prettyDate(val){
+    function prettyDate(val) {
       if (val == null) return "";
-      const raw = String(val).trim().replace(/^["']+|["']+$/g, "");
+      const raw = String(val)
+        .trim()
+        .replace(/^["']+|["']+$/g, "");
       if (!raw) return "";
       // Show human-friendly time when possible, else show raw
       try {
@@ -349,19 +399,20 @@ function initMapIfPresent() {
         norm[String(k).trim().toLowerCase()] = row[k];
       }
 
-      const lat = Number(norm['latitude'] ?? norm['lat']);
-      const lon = Number(norm['longitude'] ?? norm['lon']);
+      const lat = Number(norm["latitude"] ?? norm["lat"]);
+      const lon = Number(norm["longitude"] ?? norm["lon"]);
       if (!isFinite(lat) || !isFinite(lon)) continue;
-      const displayName = (norm['name'] ?? 'Sighting');
+      const displayName = norm["name"] ?? "Sighting";
       let popup = `<b>${displayName}</b><br>`;
-      const date = norm['date'] ?? norm['timestampiso'] ?? norm['timestamp'];
+      const date = norm["date"] ?? norm["timestampiso"] ?? norm["timestamp"];
       const dateStr = prettyDate(date);
       if (dateStr) popup += `<i>${dateStr}</i><br>`;
-      const img = norm['image_link'] ?? norm['imagedataurl'] ?? norm['image'];
-      if (img) popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
+      const img = norm["image_link"] ?? norm["imagedataurl"] ?? norm["image"];
+      if (img)
+        popup += `<img class="lfq-pop-img" src="${img}" alt="Lanternfly" />`;
       // Choose icon: default Leaflet pin for most; a blue SVG pin for current user's pins
-      const rowNameLc = (norm['name'] || '').toLowerCase();
-      const rowEmailLc = (norm['email'] || '').trim().toLowerCase();
+      const rowNameLc = (norm["name"] || "").toLowerCase();
+      const rowEmailLc = (norm["email"] || "").trim().toLowerCase();
       let marker;
       // Only use email for matching to avoid false positives
       if (currentUserEmail && rowEmailLc && rowEmailLc === currentUserEmail) {
@@ -369,7 +420,13 @@ function initMapIfPresent() {
           <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#ef4444"/>
           <circle cx="12.5" cy="12.5" r="5.5" fill="#ffffff"/>
         </svg>`;
-        const icon = L.divIcon({ className: 'lfq-pin', html: svg, iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [0,-34] });
+        const icon = L.divIcon({
+          className: "lfq-pin",
+          html: svg,
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [0, -34],
+        });
         marker = L.marker([lat, lon], { opacity: 1, icon, isMine: true });
       } else {
         marker = L.marker([lat, lon], { opacity: 1, isMine: false });
@@ -379,35 +436,52 @@ function initMapIfPresent() {
 
       // If this row matches the last submitted report, remember its marker
       if (!reportedMarker) {
-        const rowTs = String(norm['date'] ?? norm['timestampiso'] ?? norm['timestamp'] ?? '');
+        const rowTs = String(
+          norm["date"] ?? norm["timestampiso"] ?? norm["timestamp"] ?? ""
+        );
         const tsMatch = lrTs && rowTs && rowTs === lrTs;
-        const coordMatch = lr && Math.abs(lat - Number(lr.latitude ?? lr.lat ?? NaN)) < 1e-5 && Math.abs(lon - Number(lr.longitude ?? lr.lon ?? NaN)) < 1e-5;
+        const coordMatch =
+          lr &&
+          Math.abs(lat - Number(lr.latitude ?? lr.lat ?? NaN)) < 1e-5 &&
+          Math.abs(lon - Number(lr.longitude ?? lr.lon ?? NaN)) < 1e-5;
         if (tsMatch || coordMatch) reportedMarker = marker;
       }
     }
     map.addLayer(clusters);
     // If coming from a fresh report, center on that location
     try {
-      const lrLocal = lr || JSON.parse(localStorage.getItem('lfq.lastReport') || 'null');
+      const lrLocal =
+        lr || JSON.parse(localStorage.getItem("lfq.lastReport") || "null");
       if (lrLocal) {
-        if (reportedMarker && typeof reportedMarker.getLatLng === 'function') {
+        if (reportedMarker && typeof reportedMarker.getLatLng === "function") {
           const pos = reportedMarker.getLatLng();
           map.setView([pos.lat, pos.lng], 14);
-          clusters.zoomToShowLayer(reportedMarker, () => reportedMarker.openPopup());
-        } else if (isFinite(lrLocal.latitude ?? lrLocal.lat) && isFinite(lrLocal.longitude ?? lrLocal.lon)) {
+          clusters.zoomToShowLayer(reportedMarker, () =>
+            reportedMarker.openPopup()
+          );
+        } else if (
+          isFinite(lrLocal.latitude ?? lrLocal.lat) &&
+          isFinite(lrLocal.longitude ?? lrLocal.lon)
+        ) {
           const la = Number(lrLocal.latitude ?? lrLocal.lat);
           const lo = Number(lrLocal.longitude ?? lrLocal.lon);
-          if (Math.hypot(la, lo) > 0.001) { // avoid (0,0)
+          if (Math.hypot(la, lo) > 0.001) {
+            // avoid (0,0)
             map.setView([la, lo], 14);
-            let nearest = null, best = Infinity;
-            clusters.eachLayer(layer => {
-              if (typeof layer.getLatLng === 'function') {
+            let nearest = null,
+              best = Infinity;
+            clusters.eachLayer((layer) => {
+              if (typeof layer.getLatLng === "function") {
                 const ll = layer.getLatLng();
                 const d = map.distance([la, lo], ll);
-                if (d < best) { best = d; nearest = layer; }
+                if (d < best) {
+                  best = d;
+                  nearest = layer;
+                }
               }
             });
-            if (nearest) clusters.zoomToShowLayer(nearest, () => nearest.openPopup());
+            if (nearest)
+              clusters.zoomToShowLayer(nearest, () => nearest.openPopup());
           }
         } else {
           // If we haven't found the just-submitted report yet, retry a few times quickly
@@ -415,16 +489,20 @@ function initMapIfPresent() {
             const tries = Number(lrLocal.tries || 0);
             if (tries < 20) {
               lrLocal.tries = tries + 1;
-              localStorage.setItem('lfq.lastReport', JSON.stringify(lrLocal));
-              setTimeout(() => { try { refreshData && refreshData(); } catch {} }, 600);
+              localStorage.setItem("lfq.lastReport", JSON.stringify(lrLocal));
+              setTimeout(() => {
+                try {
+                  refreshData && refreshData();
+                } catch {}
+              }, 600);
             } else {
-              localStorage.removeItem('lfq.lastReport');
+              localStorage.removeItem("lfq.lastReport");
             }
           } catch {}
         }
         // When we’ve centered and opened, clear the hint
         try {
-          if (reportedMarker) localStorage.removeItem('lfq.lastReport');
+          if (reportedMarker) localStorage.removeItem("lfq.lastReport");
         } catch {}
       }
     } catch {}
@@ -439,6 +517,7 @@ function initMapIfPresent() {
       });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const data = await resp.json();
+      console.log(data);
       if (Array.isArray(data) && data.length) {
         addRows(data);
         return true;
@@ -482,8 +561,7 @@ function initMapIfPresent() {
   // Initial load and continuous refresh based on table
   refreshData();
   setInterval(refreshData, 20000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshData(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshData();
+  });
 }
-
-// Initialize map if the page has one
-try { initMapIfPresent(); } catch (e) { console.error(e); }
