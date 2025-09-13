@@ -345,11 +345,6 @@
         <p class="achv-kicker">Your total catches</p>
         <p class="achv-total"><span id="achvCatches">0</span> <span
             style="color:var(--muted);font-weight:600;">flies</span></p>
-        <div class="demo-ctrl" style="display:flex; gap:8px; align-items:center;">
-          <button id="decCount" class="btn small secondary" title="Decrease">−</button>
-          <span class="achv-total" id="demoCountVal">0</span>
-          <button id="incCount" class="btn small" title="Increase">+</button>
-        </div>
       </div>
 
       <div id="achievements" class="achv-grid" aria-live="polite"></div>
@@ -415,19 +410,19 @@
     // Use this for demos or local testing (does not affect backend data)
     const TEST_COUNTS_BY_PLACE = {
       // Cities
-      "Pittsburgh": 1,
-      "Philly": 4,
-      "New York": 3,
-      "Newark": 3,
+      "Pittsburgh": 6,
+      "Philly": 0,
+      "New York": 0,
+      "Newark": 0,
       // States
-      "PA": 8,
-      "NJ": 6,
-      "NY": 9,
-      "DE": 1
+      "PA": 6,
+      "NJ": 0,
+      "NY": 0,
+      "DE": 0
     };
     // Optional: provide a separate total that is NOT the sum of places.
     // Set to a number to override. If null, we will fall back to getCatches() or the sum of TEST_COUNTS_BY_PLACE.
-    const TEST_TOTAL_CATCHES = 100;
+    const TEST_TOTAL_CATCHES = 6;
 
 
     /* -------------------------
@@ -563,8 +558,6 @@
       if (total == null) total = sumCounts(TEST_COUNTS_BY_PLACE||{});
       const totalEl = document.getElementById('achvCatches');
       if (totalEl) totalEl.textContent = total.toLocaleString();
-      const demoEl = document.getElementById('demoCountVal');
-      if (demoEl) demoEl.textContent = total.toString();
 
       const cityAch = CITY_TARGETS.map(c=>({
         id: `city-${c.name.toLowerCase().replace(/\s+/g,'-')}`,
