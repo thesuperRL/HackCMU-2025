@@ -460,3 +460,30 @@ html {
     min-width: 220px;
   }
 }
+
+.id-tips {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.id-tips li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--card);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+.id-tips img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.id-tips p {
+  margin: 0;
+  line-height: 1.4;
+}
