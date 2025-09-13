@@ -169,6 +169,75 @@ if (logoutEl) {
   }
 })();
 
+// HOME STATS =======================
+async function updateHomeStats() {
+  const rankEl = document.getElementById("statTotalPoints"); // shows rank now
+  const streakEl = document.getElementById("statStreak");
+  const catchesEl = document.getElementById("statCatches");
+  if (!rankEl && !streakEl && !catchesEl) return;
+
+  const getLocalScores = () => {
+    try { const raw = localStorage.getItem("lfq:scores"); const arr = raw? JSON.parse(raw): []; return Array.isArray(arr)? arr: []; } catch { return []; }
+  };
+  let rows = [];
+  try {
+    const resp = await fetch("/leaderboard-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request" }),
+    });
+    const data = await resp.json();
+    rows = Array.isArray(data) ? data : [];
+  } catch { rows = []; }
+
+  const local = getLocalScores();
+  // Merge local with server, prefer local catches for current user
+  const byUid = new Map();
+  for (const r of rows) if (r && r.uid) byUid.set(r.uid, { ...r });
+  for (const r of local) {
+    if (!r || !r.uid) continue;
+    if (!byUid.has(r.uid)) byUid.set(r.uid, { ...r });
+    else {
+      const cur = byUid.get(r.uid);
+      const merged = { ...cur };
+      if ((r.catches ?? 0) > (cur.catches ?? 0)) merged.catches = r.catches;
+      if (r.username && !cur.username) merged.username = r.username;
+      if (r.streak != null) merged.streak = r.streak;
+      byUid.set(r.uid, merged);
+    }
+  }
+  rows = Array.from(byUid.values());
+
+  // sort by catches desc to compute rank
+  rows.sort((a,b)=>{
+    const av = a.catches??0, bv = b.catches??0;
+    if (av!==bv) return bv-av; // desc
+    const an = (a.username||"").toLowerCase();
+    const bn = (b.username||"").toLowerCase();
+    return an.localeCompare(bn);
+  });
+
+  const cur = (()=>{ try{ return JSON.parse(localStorage.getItem("lfq.user")||"null"); }catch{return null;} })();
+  const uid = cur && cur.uid;
+  let my = null; let myRank = 0;
+  if (uid) {
+    for (let i=0;i<rows.length;i++) if (rows[i].uid===uid) { my = rows[i]; myRank = i+1; break; }
+  } else if (local.length) {
+    // guest: take the latest entry (most recently updated) by order in storage
+    my = local[local.length-1];
+    myRank = rows.findIndex(r=>r.uid===my.uid)+1 || 0;
+  }
+
+  if (rankEl) rankEl.textContent = myRank || 0;
+  if (streakEl) streakEl.textContent = (my && my.streak) ? my.streak : 0;
+  if (catchesEl) catchesEl.textContent = (my && my.catches) ? my.catches : 0;
+}
+
+// Update on load and when local scores change
+try { updateHomeStats(); } catch {}
+window.addEventListener("storage", (e)=>{ if (e.key==="lfq:scores") updateHomeStats(); });
+document.addEventListener("lfq:scores-updated", updateHomeStats);
+
 // MAP ==============================
 
 function initMapIfPresent() {

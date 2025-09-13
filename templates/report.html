@@ -261,6 +261,37 @@
           setStatus('Report submitted. Thank you!');
           verifyMsg.textContent='';
           try{ localStorage.setItem('lfq.lastReport', JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString(), tries: 0 })); }catch{}
+          // Update local leaderboard stats (catches + streak)
+          try{
+            const u = getSavedUser();
+            const uid = (u && u.uid) ? u.uid : (email || name || 'guest');
+            const username = name || (u && (u.name || u.email)) || 'Anonymous';
+            const today = new Date();
+            const dayKey = today.toISOString().slice(0,10); // YYYY-MM-DD (UTC)
+            const key = 'lfq:scores';
+            const raw = localStorage.getItem(key);
+            const arr = raw ? JSON.parse(raw) : [];
+            const idx = Array.isArray(arr) ? arr.findIndex(r=>r&&r.uid===uid) : -1;
+            let entry = idx>=0 ? arr[idx] : { uid, username, catches: 0, streak: 0, lastDay: null };
+            // streak logic
+            const last = entry.lastDay;
+            if (last === dayKey) {
+              // same day: increment catches, keep streak
+              entry.catches = (entry.catches||0) + 1;
+            } else {
+              // new day
+              // if yesterday, continue streak; else reset to 1
+              const y = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()-1));
+              const yKey = y.toISOString().slice(0,10);
+              entry.streak = (last===yKey) ? (entry.streak||0)+1 : 1;
+              entry.catches = (entry.catches||0) + 1;
+              entry.lastDay = dayKey;
+            }
+            // ensure lastDay set at least once
+            if (!entry.lastDay) entry.lastDay = dayKey;
+            if (idx>=0) arr[idx]=entry; else arr.push(entry);
+            localStorage.setItem(key, JSON.stringify(arr));
+          }catch{}
           // Navigate to Home; indexing script will retry loading until the new row appears
           setTimeout(()=>{ window.location.href = '/?justReported=1'; }, 900);
         }

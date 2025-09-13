@@ -15,6 +15,17 @@ const fmtTimeAgo = (iso) => {
   return `${d}d ago`;
 };
 
+function getLocalScores() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(arr)) return arr;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 async function getScores() {
   try {
     const response = await fetch("/leaderboard-data", {
@@ -24,10 +35,32 @@ async function getScores() {
     });
     const data = await response.json();
     console.log("Status:", data);
-    return data; // This will return the actual data
+    const serverRows = Array.isArray(data) ? data : [];
+    const localRows = getLocalScores();
+
+    // If server empty, fall back to local
+    if (!serverRows.length && localRows.length) return localRows;
+
+    // Merge local with server, preferring higher catches from local for current user
+    const byUid = new Map();
+    for (const r of serverRows) if (r && r.uid) byUid.set(r.uid, { ...r });
+    for (const r of localRows) {
+      if (!r || !r.uid) continue;
+      if (!byUid.has(r.uid)) byUid.set(r.uid, { ...r });
+      else {
+        const cur = byUid.get(r.uid);
+        const merged = { ...cur };
+        if ((r.catches ?? 0) > (cur.catches ?? 0)) merged.catches = r.catches;
+        if (r.username && !cur.username) merged.username = r.username;
+        if (r.streak != null) merged.streak = r.streak;
+        byUid.set(r.uid, merged);
+      }
+    }
+    return Array.from(byUid.values());
   } catch (error) {
     console.error("Error fetching leaderboard:", error);
-    return []; // Return empty array on error
+    const localRows = getLocalScores();
+    return localRows; // fallback to local on error
   }
 }
 
@@ -139,10 +172,8 @@ async function render() {
       var tdUser;
       var tdC;
 
-      if (
-        localStorage.getItem("lfq.user") != null &&
-        (localStorage.getItem("lfq.user").uid = r.uid)
-      ) {
+      const curUser = (() => { try{ return JSON.parse(localStorage.getItem("lfq.user")||"null"); }catch{return null;} })();
+      if (curUser && curUser.uid && curUser.uid === r.uid) {
         console.log("Current user same!!!");
         tr = document.createElement("tr");
 
@@ -156,6 +187,7 @@ async function render() {
         const nameElSelf = document.createElement("strong");
         nameElSelf.className = "name user_self";
         nameElSelf.textContent = r.username;
+        nameElSelf.title = r.username;
         tdUser.appendChild(nameElSelf);
 
         tdC = document.createElement("td");
@@ -173,6 +205,7 @@ async function render() {
         const nameEl = document.createElement("strong");
         nameEl.className = "name";
         nameEl.textContent = r.username;
+        nameEl.title = r.username;
         tdUser.appendChild(nameEl);
 
         tdC = document.createElement("td");
