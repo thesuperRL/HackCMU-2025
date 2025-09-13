@@ -65,6 +65,7 @@ function decodeJWT(token) {
 // Store/autofill helpers
 function setUser(u) {
   try {
+    if (!u.since) u.since = new Date().toISOString();
     localStorage.setItem("lfq.user", JSON.stringify(u));
   } catch {}
   applyUserToUI(u);
@@ -135,23 +136,28 @@ function toggleMenu() {
   menu.classList.contains("hidden") ? openMenu() : closeMenu();
 }
 
-btn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleMenu();
-});
-document.addEventListener("click", (e) => {
-  if (!menu.classList.contains("hidden") && !menu.contains(e.target))
-    closeMenu();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeMenu();
-});
+if (btn && menu) {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+  document.addEventListener("click", (e) => {
+    if (!menu.classList.contains("hidden") && !menu.contains(e.target))
+      closeMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+}
 
-document.getElementById("logoutMenuBtn").addEventListener("click", () => {
-  // Optional: call your backend logout here
-  clearUser();
-  closeMenu();
-});
+const logoutEl = document.getElementById("logoutMenuBtn");
+if (logoutEl) {
+  logoutEl.addEventListener("click", () => {
+    // Optional: call your backend logout here
+    clearUser();
+    closeMenu();
+  });
+}
 
 // Load saved user if present
 (function () {
@@ -165,101 +171,115 @@ document.getElementById("logoutMenuBtn").addEventListener("click", () => {
 
 // MAP ==============================
 
-const showMapError = (msg) => {
-  const el = document.getElementById("mapError");
-  el.textContent = msg;
-  el.style.display = "block";
-};
+function initMapIfPresent() {
+  const mapEl = document.getElementById("map");
+  if (!mapEl || !window.L) return; // Only run on pages with a map
 
-var map = L.map("map", {
-  center: [40.44, -79.94],
-  zoom: 9,
-  scrollWheelZoom: true,
-  tap: false,
-});
+  const showMapError = (msg) => {
+    const el = document.getElementById("mapError");
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = "block";
+  };
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
-}).addTo(map);
+  const map = L.map("map", {
+    center: [40.44, -79.94],
+    zoom: 9,
+    scrollWheelZoom: true,
+    tap: false,
+  });
 
-document.getElementById("recenter")?.addEventListener("click", () => {
-  map.setView([40.44, -79.94], 9);
-});
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
+  }).addTo(map);
 
-var clusters = L.markerClusterGroup({
-  maxClusterRadius: 60,
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-  disableClusteringAtZoom: 18,
-  iconCreateFunction: function (cluster) {
-    var count = cluster.getChildCount();
-    var sizeClass = "small";
-    if (count >= 50 && count < 200) sizeClass = "medium";
-    else if (count >= 200) sizeClass = "large";
+  document.getElementById("recenter")?.addEventListener("click", () => {
+    map.setView([40.44, -79.94], 9);
+  });
 
-    return new L.DivIcon({
-      html: "<div><span>" + count + "</span></div>",
-      className: "marker-cluster marker-cluster-" + sizeClass,
-      iconSize: L.point(
-        sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30,
-        sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30
-      ),
-    });
-  },
-});
+  const clusters = L.markerClusterGroup({
+    maxClusterRadius: 60,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    disableClusteringAtZoom: 18,
+    iconCreateFunction: function (cluster) {
+      const count = cluster.getChildCount();
+      let sizeClass = "small";
+      if (count >= 50 && count < 200) sizeClass = "medium";
+      else if (count >= 200) sizeClass = "large";
+      return new L.DivIcon({
+        html: "<div><span>" + count + "</span></div>",
+        className: "marker-cluster marker-cluster-" + sizeClass,
+        iconSize: L.point(
+          sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30,
+          sizeClass === "large" ? 60 : sizeClass === "medium" ? 44 : 30
+        ),
+      });
+    },
+  });
 
-async function getScores() {
-  try {
-    const response = await fetch("/leaderboard-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "request" }),
-    });
-    const data = await response.json();
-    console.log("Status:", data);
-    return data; // This will return the actual data
-  } catch (error) {
-    console.error("Error fetching leaderboard:", error);
-    return []; // Return empty array on error
-  }
-}
-
-(async () => {
-  try {
-    const response = await fetch("/locations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "request" }),
-    });
-    const data = await response.json();
-    console.log("Status:", data);
-
-    for (var i = 0; i < data.length; i++) {
-      var row = data[i];
-      if (!row || !row.latitude || !row.longitude) continue;
-
-      var popupContent = `<b>${row.name || "Sighting"}</b><br>`;
-      if (row.date) popupContent += `<i>${row.date}</i><br>`;
-      if (row.image_link)
-        popupContent += `<img src="${row.image_link}" alt="${
-          row.name || "Lanternfly"
-        }" width="120" />`;
-
-      var marker = L.marker([row.latitude, row.longitude], {
-        opacity: 1,
-      }).bindPopup(popupContent);
-      clusters.addLayer(marker);
+  function addRows(rows) {
+    for (const row of rows) {
+      const lat = Number(row.latitude ?? row.lat ?? row.Latitude);
+      const lon = Number(row.longitude ?? row.lon ?? row.Longitude);
+      if (!isFinite(lat) || !isFinite(lon)) continue;
+      let popup = `<b>${row.name || row.Name || "Sighting"}</b><br>`;
+      const date = row.date || row.TimestampISO || row.timestamp;
+      if (date) popup += `<i>${date}</i><br>`;
+      const img = row.image_link || row.ImageDataURL || row.Image;
+      if (img) popup += `<img src="${img}" alt="Lanternfly" width="120" />`;
+      clusters.addLayer(L.marker([lat, lon], { opacity: 1 }).bindPopup(popup));
     }
-
     map.addLayer(clusters);
-
     if (clusters.getLayers().length > 0) {
-      var bounds = clusters.getBounds();
+      const bounds = clusters.getBounds();
       if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
     }
-  } catch (err) {
-    console.error("Error loading SQL:", err);
-    showMapError("Could not load data. Check SQL.");
   }
-})();
+
+  async function loadFromServer() {
+    try {
+      const resp = await fetch("/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request" }),
+      });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length) {
+        addRows(data);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn("/locations failed, will try CSV:", e);
+      return false;
+    }
+  }
+
+  async function loadFromCSV() {
+    try {
+      const url = "/static/data/lanternflydata.csv";
+      const res = await fetch(url, { cache: "no-cache" });
+      if (!res.ok) throw new Error("CSV HTTP " + res.status);
+      const text = await res.text();
+      if (!window.Papa) throw new Error("PapaParse not loaded");
+      const parsed = Papa.parse(text, { header: true, dynamicTyping: true });
+      addRows(parsed.data || []);
+      return true;
+    } catch (e) {
+      console.error("CSV load failed:", e);
+      showMapError("Could not load map data.");
+      return false;
+    }
+  }
+
+  (async () => {
+    const ok = await loadFromServer();
+    if (!ok) await loadFromCSV();
+  })();
+}
+
+// Initialize map if the page has one
+try { initMapIfPresent(); } catch (e) { console.error(e); }

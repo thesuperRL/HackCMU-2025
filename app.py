@@ -38,6 +38,10 @@ def map():
 def report():
     return render_template("report.html")
 
+@app.route("/profile")
+def profile():
+    return render_template("profile.html")
+
 @app.route("/achievements")
 def achievements():
     return render_template("achievements.html")
