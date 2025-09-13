@@ -75,6 +75,12 @@
       box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .03));
       display: grid;
       gap: 10px;
+      transition: filter .25s ease, box-shadow .25s ease, border-color .25s ease;
+    }
+    .achv-card[data-earned="1"]{
+      filter: brightness(1.15);
+      border-color: rgba(255,255,255,.20);
+      box-shadow: 0 12px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
     }
 
     .achv-head {
@@ -317,10 +323,15 @@
   <!-- Achievements grid -->
   <main class="section">
     <div class="container">
-      <div class="achv-summary">
+      <div class="achv-summary" style="grid-template-columns: 1fr auto; align-items: end; gap: 12px;">
         <p class="achv-kicker">Your total catches</p>
         <p class="achv-total"><span id="achvCatches">0</span> <span
             style="color:var(--muted);font-weight:600;">flies</span></p>
+        <div class="demo-ctrl" style="display:flex; gap:8px; align-items:center;">
+          <button id="decCount" class="btn small secondary" title="Decrease">−</button>
+          <span class="achv-total" id="demoCountVal">0</span>
+          <button id="incCount" class="btn small" title="Increase">+</button>
+        </div>
       </div>
 
       <div id="achievements" class="achv-grid" aria-live="polite"></div>
@@ -501,24 +512,26 @@
     /* -------------------------
        Bootstrap render
     ------------------------- */
-    (function initAchievements() {
-      const total = getCatches();
-      document.getElementById('achvCatches').textContent = total.toLocaleString();
+    // --- Demo/local count that drives all achievements ---
+    demoCount = 2;
 
-      // Combine base + geo achievements
-      const achievements = [
-        ...BASE_ACHIEVEMENTS,
-        ...buildCityAchievements(),
-        ...buildStateAchievements(),
-      ];
 
-      // Sort by requirement to keep things tidy
-      achievements.sort((a, b) => a.req - b.req);
+    function renderFromCount(){
+      document.getElementById('demoCountVal').textContent = demoCount;
+      document.getElementById('achvCatches').textContent = demoCount.toLocaleString();
+      const cityAch = CITY_TARGETS.map(c=>({ id:`city-${c.name.toLowerCase().replace(/\s+/g,'-')}`, title:`${c.name} Patrol`, req:c.req, icon:c.icon, color:c.color, desc:`Catch ${c.req} in ${c.name}.`, progress:demoCount }));
+      const stateAch= STATE_TARGETS.map(s=>({ id:`state-${s.abbr.toLowerCase()}`, title:`${s.name} Defender`, req:s.req, icon:s.icon, color:s.color, desc:`Catch ${s.req} across ${s.name}.`, progress:demoCount }));
+      const achievements=[ ...BASE_ACHIEVEMENTS.map(a=>({ ...a, progress: demoCount })), ...cityAch, ...stateAch ];
+      achievements.sort((a,b)=>a.req-b.req);
+      const grid=document.getElementById('achievements'); grid.innerHTML='';
+      achievements.forEach(a=> grid.appendChild(makeCard(a, demoCount)));
+    }
 
-      const grid = document.getElementById('achievements');
-      grid.innerHTML = '';
-      achievements.forEach(a => grid.appendChild(makeCard(a, total)));
-    })();
+    document.getElementById('incCount').addEventListener('click', ()=>{ demoCount++; try{localStorage.setItem('achv.demoCount', demoCount);}catch{} renderFromCount(); });
+    document.getElementById('decCount').addEventListener('click', ()=>{ demoCount=Math.max(0,demoCount-1); try{localStorage.setItem('achv.demoCount', demoCount);}catch{} renderFromCount(); });
+
+    // Initial render
+    renderFromCount();
   </script>
 
   <!-- Initialize Google Identity for programmatic button rendering -->
