@@ -4,6 +4,7 @@ import csv
 import base64
 import re
 from datetime import datetime, timezone
+from PIL import Image
 
 from sqlalchemy import create_engine, text, select, insert, update, MetaData, Table, exists
 from sqlalchemy.orm import sessionmaker
@@ -128,7 +129,7 @@ def give_locations():
                     "name": row.name,
                     "longitude": row.longitude,
                     "latitude": row.latitude,
-                    "image_link": row.image_link,
+                    "image_bytes": row.image_bytes,
                     "date": row.date,
                 })
     else:
@@ -173,6 +174,7 @@ def submit_report():
         # If image is a data URL, persist it to static/uploads and store the file path instead
         if image.startswith("data:image"):
             m = re.match(r"^data:image\/(png|jpeg|jpg);base64,(.+)$", image)
+            img_bytes = None
             if m:
                 ext = "jpg" if m.group(1) in ("jpeg","jpg") else "png"
                 b64 = m.group(2)
@@ -181,44 +183,6 @@ def submit_report():
                     uploads_dir = os.path.join(app.root_path, "static", "uploads")
                     os.makedirs(uploads_dir, exist_ok=True)
                     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%S%f")
-                    fname = f"lf_{ts}.{ext}"
-                    fpath = os.path.join(uploads_dir, fname)
-                    with open(fpath, "wb") as out:
-                        out.write(img_bytes)
-                    # store web path
-                    image = f"/static/uploads/{fname}"
-
-                    # Prefer image-derived date over client-provided timestamp
-                    image_date_iso = ""
-                    try:
-                        from PIL import Image, ExifTags  # type: ignore
-                        exif_dt = ""
-                        with Image.open(fpath) as im:
-                            exif = im.getexif() or {}
-                            if exif:
-                                label_map = {ExifTags.TAGS.get(k, str(k)): v for k, v in exif.items()}
-                                # Prefer DateTimeOriginal, then DateTime
-                                exif_dt = label_map.get("DateTimeOriginal") or label_map.get("DateTime") or ""
-                        if exif_dt:
-                            # EXIF format: YYYY:MM:DD HH:MM:SS
-                            try:
-                                dt = datetime.strptime(exif_dt, "%Y:%m:%d %H:%M:%S").replace(tzinfo=None)
-                                image_date_iso = dt.strftime("%Y-%m-%dT%H:%M:%S")
-                            except Exception:
-                                image_date_iso = ""
-                    except Exception:
-                        image_date_iso = ""
-
-                    if not image_date_iso:
-                        try:
-                            mtime = os.path.getmtime(fpath)
-                            image_date_iso = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
-                        except Exception:
-                            image_date_iso = ""
-
-                    # Override with image-derived date if available; else keep client or fallback later
-                    if image_date_iso:
-                        date_iso = image_date_iso
                 except Exception:
                     # fallback: keep original string if something goes wrong
                     pass
@@ -227,7 +191,7 @@ def submit_report():
             name = name,
             longitude = lon,
             latitude = lat,
-            image_link = image,
+            image_bytes = img_bytes,
             date = raw_ts,
             uid = uid,
         )
@@ -241,61 +205,6 @@ def submit_report():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
-
-
-@app.route("/admin/migrate_csv", methods=["POST", "GET"])
-def migrate_csv_add_email():
-    """Add Email column to CSV and populate with fake emails for rows missing it.
-    Safe to run multiple times; preserves existing values.
-    """
-    try:
-        csv_path = os.path.join(app.root_path, "static", "data", "lanternflydata.csv")
-        if not os.path.exists(csv_path):
-            return jsonify({"status": "error", "message": "CSV not found"}), 404
-
-        # Load rows
-        with open(csv_path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            fields = reader.fieldnames or []
-
-        desired = ["Name", "Email", "Longitude", "Latitude", "Image", "Date"]
-
-        # Build fake emails
-        used = set()
-        def mk_email(name, idx):
-            base = re.sub(r"[^a-z0-9]+", "", (name or "").lower()) or f"user{idx}"
-            email = f"{base}@example.com"
-            i = 1
-            while email in used:
-                email = f"{base}{i}@example.com"
-                i += 1
-            used.add(email)
-            return email
-
-        out_rows = []
-        updated = 0
-        for idx, r in enumerate(rows, 1):
-            name = r.get("Name") or r.get("name") or ""
-            email = r.get("Email") or r.get("email") or ""
-            lon = r.get("Longitude") or r.get("longitude") or ""
-            lat = r.get("Latitude") or r.get("latitude") or ""
-            img = r.get("Image") or r.get("image") or r.get("image_link") or ""
-            date = r.get("Date") or r.get("date") or r.get("TimestampISO") or r.get("timestamp") or ""
-            if not email:
-                email = mk_email(name, idx)
-                updated += 1
-            out_rows.append({"Name": name, "Email": email, "Longitude": lon, "Latitude": lat, "Image": img, "Date": date})
-
-        with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=desired)
-            w.writeheader()
-            for r in out_rows:
-                w.writerow(r)
-
-        return jsonify({"status": "ok", "updated": updated, "total": len(out_rows)})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
