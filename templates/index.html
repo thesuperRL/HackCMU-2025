@@ -21,6 +21,11 @@
       crossorigin=""
     ></script>
 
+    <!-- MarkerCluster plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
     <!-- jQuery + PapaParse -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
@@ -78,6 +83,34 @@
         position: fixed; left: 0; right: 0; top: 0; padding: 10px 14px;
         background: #fee; border-bottom: 1px solid #f99; color: #900;
         font: 14px/1.3 system-ui; z-index: 9999;
+      }
+
+      /* Custom cluster styles */
+      .marker-cluster-small {
+        background: rgba(97,175,254,0.6);
+        border: 2px solid rgba(97,175,254,0.9);
+      }
+      .marker-cluster-small div {
+        width: 30px; height: 30px; line-height: 30px; border-radius: 50%;
+        text-align: center; font-weight: 700; color: #fff;
+      }
+
+      .marker-cluster-medium {
+        background: rgba(255,165,0,0.6);
+        border: 2px solid rgba(255,165,0,0.9);
+      }
+      .marker-cluster-medium div {
+        width: 44px; height: 44px; line-height: 44px; border-radius: 50%;
+        text-align: center; font-weight: 700; color: #fff; font-size: 14px;
+      }
+
+      .marker-cluster-large {
+        background: rgba(220,53,69,0.6);
+        border: 2px solid rgba(220,53,69,0.9);
+      }
+      .marker-cluster-large div {
+        width: 60px; height: 60px; line-height: 60px; border-radius: 50%;
+        text-align: center; font-weight: 800; color: #fff; font-size: 16px;
       }
 
       @media (max-width: 900px) {
@@ -180,20 +213,20 @@
       </div>
     </footer>
 
-    <!-- Bootstrap bundle (optional for other UI) -->
+    <!-- Bootstrap (optional) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Google Auth -->
     <script src="https://accounts.google.com/gsi/client" async></script>
 
-    <!-- Your main JS (Flask static) -->
+    <!-- Your main JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
-    <!-- Map script -->
+    <!-- Map + Clustering script -->
     <script>
-      // Initialize map
+      // Init map
       const map = L.map("map", {
-        center: [40.44, -79.94], // Pittsburgh
+        center: [40.44, -79.94],
         zoom: 9,
         scrollWheelZoom: true,
         tap: false,
@@ -205,13 +238,33 @@
           '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
       }).addTo(map);
 
-      // Recenter button
+      // Recenter
       document.getElementById("recenter")?.addEventListener("click", () => {
         map.setView([40.44, -79.94], 9);
       });
 
-      // ---------- CSV loading from Flask static ----------
-      const CSV_URL = "{{ url_for('static', filename='data/lanternflydata.csv') }}";
+      // Clusters (small <50, medium 50-199, large >=200)
+      const clusters = L.markerClusterGroup({
+        maxClusterRadius: 60,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        disableClusteringAtZoom: 18,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          let sizeClass = "small";
+          if (count >= 50 && count < 200) sizeClass = "medium";
+          else if (count >= 200) sizeClass = "large";
+
+          return new L.DivIcon({
+            html: '<div><span>' + count + '</span></div>',
+            className: 'marker-cluster marker-cluster-' + sizeClass,
+            iconSize: L.point(
+              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30,
+              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30
+            )
+          });
+        }
+      });
 
       function showErrorBanner(msg) {
         const div = document.createElement("div");
@@ -220,16 +273,10 @@
         document.body.appendChild(div);
       }
 
-      function pickLatLngKeys(row) {
-        const keys = Object.keys(row || {});
-        const findOne = (cands) => keys.find(k => cands.includes(k.trim().toLowerCase()));
-        const latKey = findOne(["latitude", "lat", "y"]);
-        const lngKey = findOne(["longitude", "lon", "lng", "long", "x"]);
-        return { latKey, lngKey };
-      }
-
+      const CSV_URL = "{{ url_for('static', filename='data/lanternflydata.csv') }}";
       const toNum = (v) => (typeof v === "number" ? v : (typeof v === "string" ? Number(v.trim()) : NaN));
 
+      // Load CSV and add markers to cluster group
       (async () => {
         try {
           const res = await fetch(CSV_URL, { cache: "no-cache" });
@@ -244,42 +291,51 @@
             return;
           }
 
-          const { latKey, lngKey } = pickLatLngKeys(rows[0]);
-          if (!latKey || !lngKey) {
-            showErrorBanner("Could not find latitude/longitude columns in CSV. Expected headers like Latitude, Longitude (case-insensitive).");
-            console.log("First row keys:", Object.keys(rows[0]));
+          // Try to be forgiving about header names
+          const keys = Object.keys(rows[0] || {}).reduce((acc, k) => { acc[k.toLowerCase()] = k; return acc; }, {});
+          const latK = keys["latitude"] || keys["lat"] || keys["y"];
+          const lngK = keys["longitude"] || keys["lon"] || keys["lng"] || keys["long"] || keys["x"];
+
+          if (!latK || !lngK) {
+            showErrorBanner("Could not find latitude/longitude columns in CSV. Expected headers like Latitude, Longitude.");
+            console.log("First row keys:", Object.keys(rows[0] || {}));
             return;
           }
 
           const markers = [];
           for (const row of rows) {
-            const lat = toNum(row[latKey]);
-            const lng = toNum(row[lngKey]);
+            const lat = toNum(row[latK]);
+            const lng = toNum(row[lngK]);
             if (!isFinite(lat) || !isFinite(lng)) continue;
 
-            const nameKey = Object.keys(row).find(k => k.toLowerCase() === "name");
-            const dateKey = Object.keys(row).find(k => k.toLowerCase() === "date");
-            const imgKey  = Object.keys(row).find(k => k.toLowerCase() === "image");
+            const nameK = keys["name"];
+            const dateK = keys["date"];
+            const imgK  = keys["image"];
 
             let html = "";
-            if (nameKey && row[nameKey]) html += `<b>${row[nameKey]}</b><br/>`;
-            if (dateKey && row[dateKey]) html += `<i>${row[dateKey]}</i><br/>`;
-            if (imgKey  && row[imgKey])  html += `<img src="${row[imgKey]}" alt="${row[nameKey] || "image"}" width="140" />`;
+            if (nameK && row[nameK]) html += `<b>${row[nameK]}</b><br/>`;
+            if (dateK && row[dateK]) html += `<i>${row[dateK]}</i><br/>`;
+            if (imgK  && row[imgK])  html += `<img src="${row[imgK]}" alt="${row[nameK] || "image"}" width="120" />`;
 
-            const m = L.marker([lat, lng], { opacity: 1 }).bindPopup(html || "Lanternfly report");
-            m.addTo(map);
-            markers.push(m);
+            const marker = L.marker([lat, lng], { opacity: 1 }).bindPopup(html || "Lanternfly report");
+            clusters.addLayer(marker);
+            markers.push(marker);
           }
 
-          if (markers.length === 0) {
-            showErrorBanner("CSV loaded but no valid coordinates found. Check column names and values.");
-          } else if (markers.length > 1) {
+          // Add clusters to map
+          map.addLayer(clusters);
+
+          // Fit bounds if we have points
+          if (markers.length > 0) {
             const group = L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.2));
+            const bounds = group.getBounds();
+            if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+          } else {
+            showErrorBanner("CSV loaded, but no valid coordinates were found.");
           }
         } catch (err) {
           console.error(err);
-          showErrorBanner(err.message + " (open DevTools → Network to inspect the request)");
+          showErrorBanner(err.message + " (check DevTools → Network for details)");
         }
       })();
     </script>
