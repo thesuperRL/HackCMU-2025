@@ -390,7 +390,6 @@ function initMapIfPresent() {
     }
 
     // Keep pins even if date fails to parse; we will display raw
-
     for (const row of rows) {
       // Normalize keys: trim + lowercase to be resilient to CSV header variations
       const norm = {};
@@ -490,11 +489,6 @@ function initMapIfPresent() {
             if (tries < 20) {
               lrLocal.tries = tries + 1;
               localStorage.setItem("lfq.lastReport", JSON.stringify(lrLocal));
-              setTimeout(() => {
-                try {
-                  refreshData && refreshData();
-                } catch {}
-              }, 600);
             } else {
               localStorage.removeItem("lfq.lastReport");
             }
@@ -517,7 +511,6 @@ function initMapIfPresent() {
       });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const data = await resp.json();
-      console.log(data);
       if (Array.isArray(data) && data.length) {
         addRows(data);
         return true;
@@ -529,41 +522,14 @@ function initMapIfPresent() {
     }
   }
 
-  async function loadFromCSV() {
-    try {
-      const url = "/static/data/lanternflydata.csv?ts=" + Date.now();
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error("CSV HTTP " + res.status);
-      const text = await res.text();
-      if (!window.Papa) throw new Error("PapaParse not loaded");
-      const parsed = Papa.parse(text, { header: true, dynamicTyping: true });
-      addRows(parsed.data || []);
-      return true;
-    } catch (e) {
-      console.error("CSV load failed:", e);
-      showMapError("Could not load map data.");
-      return false;
-    }
-  }
-
-  // For this app, prefer CSV as the single source of truth.
-  // Set CSV_ONLY=false if you want to re-enable the server source.
-  const CSV_ONLY = true;
-
   async function refreshData() {
-    if (CSV_ONLY) {
-      await loadFromCSV();
-      return;
-    }
     const ok = await loadFromServer();
-    if (!ok) await loadFromCSV();
+    // Initial load and continuous refresh based on table
+    setInterval(refreshData, 2000000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshData();
+    });
   }
-  // Initial load and continuous refresh based on table
-  refreshData();
-  setInterval(refreshData, 20000);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refreshData();
-  });
 }
 
 // Ensure pages that include only main.js still initialize the map
@@ -572,3 +538,5 @@ try {
 } catch (e) {
   console.warn("Map initialization failed:", e);
 }
+
+refreshData();
