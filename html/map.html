@@ -57,9 +57,9 @@
 
         // see more basemap options at https://leaflet-extras.github.io/leaflet-providers/preview/
         // Read markers data from data.csv
-        $.get('./lanternflydata.csv', function (csvString) {
+        $.get('../data/lanternflydata.csv', function (csvString) {
             console.log("got data")
-            var data = Papa.parse(csvString, {header: true, dynamicTyping: true}).data;
+            var data = Papa.parse(csvString, { header: true, dynamicTyping: true }).data;
             for (var i in data) {
                 var row = data[i];
 
@@ -74,6 +74,11 @@
 
                 // Build popup content with name and image
                 var popupContent = `<b>${row.Name}</b><br>`;
+
+                if (row.Date) {
+                    popupContent += `<i>${row.Date}</i><br>`;
+                }
+
                 if (row.Image) {
                     popupContent += `<img src="${row.Image}" alt="${row.Name}" width="120" />`;
                 }
