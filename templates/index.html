@@ -159,51 +159,34 @@
       </div>
     </header>
 
-    <!-- Main -->
-    <main>
-      <!-- Hero -->
-      <section class="hero">
-        <div class="container hero-inner">
-          <div>
-            <h1>Turn invasive pests into points.</h1>
-            <p class="lead">
-              Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies.
-              Log catches, compete on the leaderboard, and earn badges for real-world impact.
-            </p>
-            <a href="#report" class="btn cta">Start Reporting</a>
-          </div>
-
-          <div class="hero-card" aria-hidden="true">
-            <div class="card stat">
-              <i class="bi bi-trophy"></i>
-              <span class="stat-label">Total Points</span>
-              <span id="statTotalPoints" class="stat-value">0</span>
-            </div>
-            <div class="card stat">
-              <i class="bi bi-fire"></i>
-              <span class="stat-label">Your Streak</span>
-              <span id="statStreak" class="stat-value">0</span>
-            </div>
-            <div class="card stat">
-              <i class="bi bi-bug"></i>
-              <span class="stat-label">Your Catches</span>
-              <span id="statCatches" class="stat-value">0</span>
-            </div>
-          </div>
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div>
+          <h1>Turn invasive pests into points.</h1>
+          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches, compete on the leaderboard, and earn badges for real-world impact.</p>
+          <a href="#report" class="btn cta">Start Reporting</a>
         </div>
-      </section>
-
-      <!-- Map section -->
-      <section class="map-section">
-        <div class="container">
-          <div class="map-header">
-            <h2>Recent lanternfly reports</h2>
-            <button id="recenter" class="btn small">Recenter to Pittsburgh</button>
+        <!-- Updated hero-card with icons -->
+        <div class="hero-card" aria-hidden="true">
+          <div class="card stat">
+            <i class="bi bi-trophy"></i>
+            <span class="stat-label">Total Points</span>
+            <span id="statTotalPoints" class="stat-value">0</span>
           </div>
-          <div id="map" role="region" aria-label="Lanternfly map"></div>
-        </div>
-      </section>
-    </main>
+          <div class="card stat">
+            <i class="bi bi-fire"></i>
+            <span class="stat-label">Your Streak</span>
+            <span id="statStreak" class="stat-value">0</span>
+          </div>
+          <div class="card stat">
+            <i class="bi bi-bug"></i>
+            <span class="stat-label">Your Catches</span>
+            <span id="statCatches" class="stat-value">0</span>
+          </div>
+      </div>
+    </section>
+  </main>
 
     <!-- Footer -->
     <footer class="site-footer">
@@ -213,131 +196,10 @@
       </div>
     </footer>
 
-    <!-- Bootstrap (optional) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Google Auth -->
-    <script src="https://accounts.google.com/gsi/client" async></script>
-
-    <!-- Your main JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
-    <!-- Map + Clustering script -->
-    <script>
-      // Init map
-      const map = L.map("map", {
-        center: [40.44, -79.94],
-        zoom: 9,
-        scrollWheelZoom: true,
-        tap: false,
-      });
-
-      // Basemap
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        attribution:
-          '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>',
-      }).addTo(map);
-
-      // Recenter
-      document.getElementById("recenter")?.addEventListener("click", () => {
-        map.setView([40.44, -79.94], 9);
-      });
-
-      // Clusters (small <50, medium 50-199, large >=200)
-      const clusters = L.markerClusterGroup({
-        maxClusterRadius: 60,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        disableClusteringAtZoom: 18,
-        iconCreateFunction: function (cluster) {
-          const count = cluster.getChildCount();
-          let sizeClass = "small";
-          if (count >= 50 && count < 200) sizeClass = "medium";
-          else if (count >= 200) sizeClass = "large";
-
-          return new L.DivIcon({
-            html: '<div><span>' + count + '</span></div>',
-            className: 'marker-cluster marker-cluster-' + sizeClass,
-            iconSize: L.point(
-              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30,
-              sizeClass === 'large' ? 60 : sizeClass === 'medium' ? 44 : 30
-            )
-          });
-        }
-      });
-
-      function showErrorBanner(msg) {
-        const div = document.createElement("div");
-        div.className = "error-banner";
-        div.textContent = "Map data error: " + msg;
-        document.body.appendChild(div);
-      }
-
-      const CSV_URL = "{{ url_for('static', filename='data/lanternflydata.csv') }}";
-      const toNum = (v) => (typeof v === "number" ? v : (typeof v === "string" ? Number(v.trim()) : NaN));
-
-      // Load CSV and add markers to cluster group
-      (async () => {
-        try {
-          const res = await fetch(CSV_URL, { cache: "no-cache" });
-          if (!res.ok) throw new Error(`HTTP ${res.status} for ${CSV_URL}`);
-          const text = await res.text();
-
-          const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
-          const rows = parsed.data || [];
-
-          if (!rows.length) {
-            showErrorBanner("CSV loaded but contains no rows.");
-            return;
-          }
-
-          // Try to be forgiving about header names
-          const keys = Object.keys(rows[0] || {}).reduce((acc, k) => { acc[k.toLowerCase()] = k; return acc; }, {});
-          const latK = keys["latitude"] || keys["lat"] || keys["y"];
-          const lngK = keys["longitude"] || keys["lon"] || keys["lng"] || keys["long"] || keys["x"];
-
-          if (!latK || !lngK) {
-            showErrorBanner("Could not find latitude/longitude columns in CSV. Expected headers like Latitude, Longitude.");
-            console.log("First row keys:", Object.keys(rows[0] || {}));
-            return;
-          }
-
-          const markers = [];
-          for (const row of rows) {
-            const lat = toNum(row[latK]);
-            const lng = toNum(row[lngK]);
-            if (!isFinite(lat) || !isFinite(lng)) continue;
-
-            const nameK = keys["name"];
-            const dateK = keys["date"];
-            const imgK  = keys["image"];
-
-            let html = "";
-            if (nameK && row[nameK]) html += `<b>${row[nameK]}</b><br/>`;
-            if (dateK && row[dateK]) html += `<i>${row[dateK]}</i><br/>`;
-            if (imgK  && row[imgK])  html += `<img src="${row[imgK]}" alt="${row[nameK] || "image"}" width="120" />`;
-
-            const marker = L.marker([lat, lng], { opacity: 1 }).bindPopup(html || "Lanternfly report");
-            clusters.addLayer(marker);
-            markers.push(marker);
-          }
-
-          // Add clusters to map
-          map.addLayer(clusters);
-
-          // Fit bounds if we have points
-          if (markers.length > 0) {
-            const group = L.featureGroup(markers);
-            const bounds = group.getBounds();
-            if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.2));
-          } else {
-            showErrorBanner("CSV loaded, but no valid coordinates were found.");
-          }
-        } catch (err) {
-          console.error(err);
-          showErrorBanner(err.message + " (check DevTools → Network for details)");
-        }
-      })();
-    </script>
-  </body>
+  <!-- Latest compiled JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Google Authentication Script -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="static/js/main.js"></script>
+</body>
 </html>
