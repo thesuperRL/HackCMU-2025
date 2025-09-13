@@ -65,7 +65,26 @@ async function getScores() {
 }
 
 function setScores(obj) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  // Coerce incoming data into an array of {username, catches, uid}
+  let arr;
+  if (Array.isArray(obj)) {
+    arr = obj;
+  } else if (obj && typeof obj === "object") {
+    arr = Object.entries(obj).map(([username, v], i) => {
+      if (v && typeof v === "object") {
+        return {
+          username: v.username || username,
+          catches: Number(v.catches ?? 0) || 0,
+          uid: v.uid || `seed-${i}`,
+          streak: Number(v.streak ?? 0) || 0,
+        };
+      }
+      return { username, catches: Number(v) || 0, uid: `seed-${i}` };
+    });
+  } else {
+    arr = [];
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   dispatchEvent(new Event("lfq:scores-updated"));
 }
 
@@ -162,11 +181,17 @@ async function render() {
   const rows = await computeRows(searchEl.value);
   bodyEl.innerHTML = "";
 
-  if (rows.length === 0) {
+  // Always show ranks 1..4 in order
+  const top4 = [...rows]
+    .filter(r => r && typeof r.rank === "number")
+    .sort((a, b) => (a.rank - b.rank))
+    .slice(0, 4);
+
+  if (top4.length === 0) {
     emptyEl.hidden = false;
   } else {
     emptyEl.hidden = true;
-    for (const r of rows) {
+    for (const r of top4) {
       var tr;
       var tdRank;
       var tdUser;
@@ -250,9 +275,43 @@ document.getElementById("refreshBtn").addEventListener("click", render);
 
 // seed demo data (now loads from JSON instead)
 document.getElementById("seedBtn").addEventListener("click", () => {
-  // Use the data from the JSON file if available
-  const jsonData = window.leaderboardData || {};
-  setScores(jsonData);
+  // Generate rich demo data with random users and catches
+  const names = [
+    "Alex Hunter","Bailey Kim","Casey Morgan","Dev Patel","Evan Brooks",
+    "Finley Chen","Gabe Ortiz","Harper Singh","Indie Rivera","Jordan Fox",
+    "Kai Nguyen","Logan Park","Mika Ramos","Noa Levy","Owen Shah",
+    "Parker Diaz","Quinn Blake","Riley Stone","Sage Ali","Tatum Wells",
+    "Uma Reed","Vince Lin","Wren Cole","Xavi Cruz","Yara Ford","Zane Hale"
+  ];
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const N = 40 + rand(0, 20);
+  const used = new Set();
+  const pickName = () => {
+    let base = names[rand(0, names.length - 1)];
+    let n = base;
+    let i = 1;
+    while (used.has(n)) { n = `${base} ${++i}`; }
+    used.add(n);
+    return n;
+  };
+  const rows = [];
+  for (let i = 0; i < N; i++) {
+    const username = pickName();
+    const catches = rand(1, 120);
+    const streak = rand(0, 15);
+    rows.push({ username, catches, uid: `demo-${i}-${Date.now()}`, streak });
+  }
+  // Optionally include current user so they appear in the board
+  try {
+    const u = JSON.parse(localStorage.getItem("lfq.user") || "null");
+    if (u && u.uid) {
+      const mine = rows[rand(0, rows.length - 1)];
+      mine.username = u.name || u.email || mine.username;
+      mine.uid = u.uid;
+    }
+  } catch {}
+  // Persist and render
+  setScores(rows);
   render();
 });
 
