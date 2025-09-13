@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -9,7 +11,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 
-  <!-- Page-scoped styles (kept minimal; won’t conflict with your CSS) -->
+  <!-- Page-scoped styles -->
   <style>
     .achv-hero {
       padding: 48px 0 16px;
@@ -27,14 +29,15 @@
     .achv-kicker { color: var(--muted); margin: 0 }
     .achv-total { font-weight: 800; font-size: 1.5rem; margin: 0 }
 
+    /* Center the last row nicely on any screen size */
     .achv-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0,1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
+      justify-content: center;   /* centers the final row */
+      align-items: stretch;
     }
-    @media (max-width: 1100px) { .achv-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (max-width: 780px)  { .achv-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media (max-width: 520px)  { .achv-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { .achv-grid { grid-template-columns: 1fr; } }
 
     .achv-card {
       background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
@@ -59,17 +62,15 @@
       color: #7dd3fc;
       font-size: 22px;
     }
-    .achv-title {
-      font-weight: 800; margin: 0;
-    }
+    .achv-title { font-weight: 800; margin: 0; }
     .achv-status {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 8px; border-radius: 999px; font-weight: 800; font-size: .85rem;
       border: 1px solid rgba(255,255,255,.10);
     }
-    .achv-earned   { background: rgba(34,197,94,.15); color: #86efac; border-color: rgba(34,197,94,.35); }
-    .achv-locked   { background: rgba(15,23,42,.55); color: var(--muted); }
-    .achv-desc     { color: var(--muted); margin: 0; }
+    .achv-earned { background: rgba(34,197,94,.15); color: #86efac; border-color: rgba(34,197,94,.35); }
+    .achv-locked { background: rgba(15,23,42,.55); color: var(--muted); }
+    .achv-desc   { color: var(--muted); margin: 0; }
 
     .achv-progress {
       height: 10px; border-radius: 999px; background: rgba(255,255,255,.08);
@@ -102,11 +103,10 @@
 
       <nav class="nav">
         <a href="/">Home</a>
-        <a href="/info">Info</a>
+        <a href="/info">About</a>
         <a href="/learn">Learn</a>
         <a href="/report">Report</a>
         <a href="/leaderboard">Leaderboard</a>
-        <a href="/achievements">Achievements</a>
       </nav>
 
       <div class="auth">
@@ -140,11 +140,6 @@
       </div>
 
       <div id="achievements" class="achv-grid" aria-live="polite"></div>
-
-      <div id="achvHint" style="margin-top:14px;color:var(--muted);font-size:.95rem">
-        Tip: this page checks <code>window.App.stats.catches</code>, then <code>localStorage</code> (<code>LFQ_CATCHES</code>, <code>catches</code>, or <code>demo.catches</code>).  
-        For quick testing, add <code>?catches=25</code> to the URL.
-      </div>
     </div>
   </main>
 
@@ -153,29 +148,54 @@
     <div class="container footer-inner">
       <span>LanternFly Quest · v0.1</span>
     </div>
+    
   </footer>
 
-  <!-- Optional: Bootstrap & Google Identity (if used globally) -->
+  <!-- Optional: Bootstrap & Google Identity -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
-
-  <!-- Your app JS (if it exposes App.stats etc.) -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
   <script>
-    // --- Config your badges here ---
-    const ACHIEVEMENTS = [
-      { id: 'first-blood',    title: 'First Catch',      req: 1,    icon: '🐞', color: '#34d399' },
-      { id: 'tenacious',      title: 'Tenacious Ten',    req: 10,   icon: '🔥', color: '#f59e0b' },
-      { id: 'field-agent',    title: 'Field Agent',      req: 25,   icon: '🕵️', color: '#7dd3fc' },
-      { id: 'neighborhood',   title: 'Neighborhood Hero',req: 50,   icon: '🏘️', color: '#a78bfa' },
-      { id: 'centurion',      title: 'Centurion',        req: 100,  icon: '💯', color: '#ef4444' },
-      { id: 'ranger',         title: 'Urban Ranger',     req: 250,  icon: '🌆', color: '#10b981' },
-      { id: 'exterminator',   title: 'Exterminator',     req: 500,  icon: '⚔️', color: '#22d3ee' },
-      { id: 'legend',         title: 'Legend of Pittsburgh', req: 1000, icon: '🏆', color: '#fde047' },
+    /* -------------------------
+       Core achievements (global)
+    ------------------------- */
+    const BASE_ACHIEVEMENTS = [
+      { id: 'first-blood',  title: 'First Blood',          req: 1,    icon: '🐞', color: '#34d399' },
+      { id: 'tenacious',    title: 'Tenacious Ten',        req: 10,   icon: '🔥', color: '#f59e0b' },
+      { id: 'field-agent',  title: 'Field Agent',          req: 25,   icon: '🕵️', color: '#7dd3fc' },
+      { id: 'neighborhood', title: 'Hometown Hero',    req: 50,   icon: '🏘️', color: '#a78bfa' },
+      { id: 'centurion',    title: 'Centurion',            req: 100,  icon: '💯', color: '#ef4444' },
+      { id: 'ranger',       title: 'Urban Ranger',         req: 250,  icon: '🌆', color: '#10b981' },
+      { id: 'exterminator', title: 'Exterminator',         req: 500,  icon: '⚔️', color: '#22d3ee' },
+      { id: 'legend',       title: 'Pitt Legend', req: 1000, icon: '🏆', color: '#fde047' },
     ];
 
-    // --- Get catches from multiple possible sources ---
+    /* ---------------------------------------------------
+       Geo achievements (cities & states) — examples
+       Provide counts via localStorage or query params.
+       LocalStorage keys:
+         - LFQ_BY_CITY  = {"Pittsburgh": 6, "Philadelphia": 3}
+         - LFQ_BY_STATE = {"PA": 15, "NJ": 8, "NY": 2}
+       Or via URL params like:
+         ?city.Pittsburgh=6&city.Philadelphia=3&state.PA=15
+    --------------------------------------------------- */
+    const CITY_TARGETS = [
+      { name: 'Pittsburgh',   req: 5,  icon: '🏙️', color: '#38bdf8' },
+      { name: 'Philly', req: 5,  icon: '🔔', color: '#60a5fa' },
+      { name: 'New York',     req: 5,  icon: '🗽', color: '#22d3ee' },
+      { name: 'Newark',       req: 3,  icon: '✈️', color: '#67e8f9' },
+    ];
+    const STATE_TARGETS = [
+      { abbr: 'PA',  name: 'PA', req: 10, icon: '🦫', color: '#34d399' },
+      { abbr: 'NJ',  name: 'NJ',   req: 10, icon: '🌉', color: '#f59e0b' },
+      { abbr: 'NY',  name: 'NY',     req: 10, icon: '🍎', color: '#ef4444' },
+      { abbr: 'DE',  name: 'DE',     req: 5,  icon: '🏞️', color: '#a78bfa' },
+    ];
+
+    /* -------------------------
+       Read totals & geo splits
+    ------------------------- */
     function getCatchesFromURL() {
       const m = location.search.match(/[?&]catches=(\d+)/i);
       return m ? parseInt(m[1], 10) : null;
@@ -202,14 +222,67 @@
           ?? 0;
     }
 
-    // --- Render helpers ---
-    function makeCard(a, catches) {
-      const earned = catches >= a.req;
-      const pct = Math.max(0, Math.min(100, Math.floor((catches / a.req) * 100)));
+    function parseObjFromLocalStorage(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    }
+    function parseGeoFromURL(prefix) {
+      // ?city.Pittsburgh=6&state.PA=15
+      const params = new URLSearchParams(location.search);
+      const out = {};
+      for (const [k,v] of params) {
+        if (k.startsWith(prefix + ".")) {
+          out[k.slice(prefix.length + 1)] = Number(v);
+        }
+      }
+      return out;
+    }
+
+    const BY_CITY  = Object.assign({}, parseObjFromLocalStorage('LFQ_BY_CITY'),  parseGeoFromURL('city'));
+    const BY_STATE = Object.assign({}, parseObjFromLocalStorage('LFQ_BY_STATE'), parseGeoFromURL('state'));
+
+    /* ---------------------------------------
+       Build geo achievements with progress
+    --------------------------------------- */
+    function buildCityAchievements() {
+      return CITY_TARGETS.map(c => ({
+        id: `city-${c.name.toLowerCase().replace(/\s+/g,'-')}`,
+        title: `${c.name} Patrol`,
+        req: c.req,
+        icon: c.icon,
+        color: c.color,
+        desc: `Catch ${c.req} in ${c.name}.`,
+        progress: Number(BY_CITY[c.name] || 0)
+      }));
+    }
+    function buildStateAchievements() {
+      return STATE_TARGETS.map(s => ({
+        id: `state-${s.abbr.toLowerCase()}`,
+        title: `${s.name} Defender`,
+        req: s.req,
+        icon: s.icon,
+        color: s.color,
+        desc: `Catch ${s.req} across ${s.name}.`,
+        progress: Number(BY_STATE[s.abbr] || 0)
+      }));
+    }
+
+    /* -------------------------
+       Render helpers
+    ------------------------- */
+    function makeCard(a, totalCatches) {
+      // If a.progress is provided (city/state), use it; else use total
+      const progress = (typeof a.progress === 'number') ? a.progress : totalCatches;
+      const earned = progress >= a.req;
+      const pct = Math.max(0, Math.min(100, Math.floor((progress / a.req) * 100)));
 
       const card = document.createElement('div');
       card.className = 'achv-card';
       card.setAttribute('data-earned', earned ? '1' : '0');
+
+      const desc = a.desc || `Catch ${a.req.toLocaleString()} lanternfl${a.req === 1 ? 'y' : 'ies'}.`;
 
       card.innerHTML = `
         <div class="achv-head">
@@ -218,7 +291,7 @@
           </div>
           <div>
             <h3 class="achv-title">${a.title}</h3>
-            <p class="achv-desc">Catch ${a.req.toLocaleString()} spotted lanternfl${a.req === 1 ? 'y' : 'ies'}.</p>
+            <p class="achv-desc">${desc}</p>
           </div>
           <span class="achv-status ${earned ? 'achv-earned' : 'achv-locked'}">
             ${earned ? '<i class="bi bi-check-circle"></i> Earned' : '<i class="bi bi-lock"></i> Locked'}
@@ -229,24 +302,32 @@
 
         <div class="achv-req">
           <span>Progress</span>
-          <span><strong>${Math.min(catches, a.req).toLocaleString()}</strong> / ${a.req.toLocaleString()}</span>
+          <span><strong>${Math.min(progress, a.req).toLocaleString()}</strong> / ${a.req.toLocaleString()}</span>
         </div>
       `;
       return card;
     }
 
-    // --- Bootstrap the page ---
+    /* -------------------------
+       Bootstrap render
+    ------------------------- */
     (function initAchievements(){
-      const catches = getCatches();
-      document.getElementById('achvCatches').textContent = catches.toLocaleString();
+      const total = getCatches();
+      document.getElementById('achvCatches').textContent = total.toLocaleString();
+
+      // Combine base + geo achievements
+      const achievements = [
+        ...BASE_ACHIEVEMENTS,
+        ...buildCityAchievements(),
+        ...buildStateAchievements(),
+      ];
+
+      // Sort by requirement to keep things tidy
+      achievements.sort((a,b) => a.req - b.req);
 
       const grid = document.getElementById('achievements');
       grid.innerHTML = '';
-
-      // Sort by requirement ascending, render
-      ACHIEVEMENTS.sort((a,b) => a.req - b.req).forEach(a => {
-        grid.appendChild(makeCard(a, catches));
-      });
+      achievements.forEach(a => grid.appendChild(makeCard(a, total)));
     })();
   </script>
 </body>

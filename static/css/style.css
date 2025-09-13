@@ -487,3 +487,79 @@ html {
   margin: 0;
   line-height: 1.4;
 }
+
+
+/* Header: only the middle column may shrink; side columns stay comfy */
+.achv-head{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto; /* key: minmax(0,1fr) */
+  gap: 12px;
+  align-items: center;
+}
+
+/* Prevent the side columns from shrinking */
+.achv-badge,
+.achv-status{
+  flex: 0 0 auto;      /* for safety if flex ends up applied somewhere */
+  min-width: max-content;
+}
+
+/* Allow the middle column to wrap properly (the magic min-width:0 for grid items) */
+.achv-head-main{
+  min-width: 0;        /* critical so text wraps instead of squishing others */
+}
+
+/* Titles: wrap nicely and avoid overflow; clamp to 2 lines to keep cards tidy */
+.achv-title{
+  margin: 0;
+  font-weight: 800;
+  overflow-wrap: anywhere;     /* handles veryLongWordsOrURLs */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;       /* show up to 2 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Descriptions wrap normally but don’t stretch the card too much */
+.achv-desc{
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: break-word;
+}
+
+/* Keep the status pill readable and unsquished */
+.achv-status{
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: .85rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+/* Make every card the same visual height across the row */
+.achv-grid{
+  align-items: stretch;     /* already present; keeps card heights even */
+}
+.achv-card{
+  display: grid;
+  grid-auto-rows: min-content auto min-content; /* header / flexible / footer */
+}
+
+/* On narrower widths, let the status wrap under the title instead of squishing */
+@media (max-width: 50000px){
+  .achv-head{
+    grid-template-columns: auto minmax(0,1fr);  /* drop the third column */
+    grid-template-areas:
+      "badge main"
+      "status status";
+    row-gap: 8px;
+  }
+  .achv-badge{ grid-area: badge; }
+  .achv-head-main{ grid-area: main; }
+  .achv-status{
+    grid-area: status;
+    justify-self: start;    /* align left under the text */
+  }
+}
+
