@@ -80,6 +80,7 @@ def receive_data():
         google_name=account_json.get("name"),
         google_email=account_json.get("email"),
         google_uid=account_json.get("id"),
+        location_tally_json={},
     )
 
     with engine.begin() as conn:
@@ -143,6 +144,21 @@ def give_locations():
 
     # Return something back to JS
     return jsonify(mapsData)
+
+
+@app.route("/achievements", methods=["POST"])
+def give_achievements():
+    data = request.get_json()
+    request = data.get("request")  # variable sent from JS
+    print(f"Received from JS: {request}")
+
+    query = select(maps).where(accounts.c.google_uid == data.get("uid"))
+    with engine.begin() as conn:
+        q = conn.execute(query)
+        return jsonify(q.first().location_tally_json)
+
+    # Return something back to JS
+    return jsonify({})
 
 @app.route("/submit_report", methods=["POST"])
 def submit_report():
