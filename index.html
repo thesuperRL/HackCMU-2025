@@ -1,115 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Add Bootstrap Icons CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <title>HackCMU 2025</title>
-  <link rel="stylesheet" href="css/style.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Add Bootstrap Icons CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
     <title>HackCMU 2025</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-
-  <header class="site-header">
-    <div class="container header-inner">
-      <div class="brand">
-        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z" fill="currentColor"/>
-        </svg>
-        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z" fill="currentColor"/></svg>
-        <span class="title">LanternFly Quest</span>
-        <span class="pill">alpha</span>
-      </div>
-      <nav class="nav">
-        <a href="#learn">Learn</a>
-        <a href="#report">Report</a>
-        <a href="#leaderboard">Leaderboard</a>
-      </nav>
-      <div class="auth">
-        <form id="loginForm" class="login-form" autocomplete="off">
-          <input id="loginName" name="username" placeholder="Username" aria-label="Username" />
-          <button type="submit" class="btn">Log in</button>
-        </form>
-        <div id="authed" class="authed hidden">
-          <span id="whoami"></span>
-          <button id="logoutBtn" class="btn secondary">Log out</button>
+    <link rel="stylesheet" href="css/style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Add Bootstrap Icons CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+    <title>HackCMU 2025</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
+              fill="currentColor"
+            />
+          </svg>
+          <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2c-2.5 0-4.5 2-4.5 4.5S12 14 12 14s4.5-5 4.5-7.5S14.5 2 12 2zm0 0c-3 0-5.5 2.5-5.5 5.5S9 13 12 13s5.5-2.5 5.5-5.5S15 2 12 2z"
+              fill="currentColor"
+            />
+          </svg>
+          <span class="title">LanternFly Quest</span>
+          <span class="pill">alpha</span>
         </div>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="container hero-inner">
-        <div>
-          <h1>Turn invasive pests into points.</h1>
-          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches, compete on the leaderboard, and earn badges for real-world impact.</p>
-          <a href="#report" class="btn cta">Start Reporting</a>
-        </div>
-        <!-- Updated hero-card with icons -->
-        <div class="hero-card" aria-hidden="true">
-          <div class="card stat">
-            <i class="bi bi-trophy"></i>
-            <span class="stat-label">Total Points</span>
-            <span id="statTotalPoints" class="stat-value">0</span>
+        <nav class="nav">
+          <a href="#learn">Learn</a>
+          <a href="#report">Report</a>
+          <a href="#leaderboard">Leaderboard</a>
+        </nav>
+        <div class="auth">
+          <form id="loginForm" class="login-form" autocomplete="off">
+            <input
+              id="loginName"
+              name="username"
+              placeholder="Username"
+              aria-label="Username"
+            />
+            <button type="submit" class="btn">Log in</button>
+          </form>
+          <div id="authed" class="authed hidden">
+            <span id="whoami"></span>
+            <button id="logoutBtn" class="btn secondary">Log out</button>
           </div>
-          <div class="card stat">
-            <i class="bi bi-fire"></i>
-            <span class="stat-label">Your Streak</span>
-            <span id="statStreak" class="stat-value">0</span>
-          </div>
-          <div class="card stat">
-            <i class="bi bi-bug"></i>
-            <span class="stat-label">Your Catches</span>
-            <span id="statCatches" class="stat-value">0</span>
-          </div>
-          <p class="lead">Track, verify, and <strong>gamify</strong> the removal of spotted lanternflies. Log catches, compete on the leaderboard, and earn badges for real‑world impact.</p>
-          <a href="#report" class="btn cta">Start Reporting</a>
-        </div>
-        <div class="hero-card" aria-hidden="true">
-          <div class="card stat"><span class="stat-label">Total Points</span><span id="statTotalPoints" class="stat-value">0</span></div>
-          <div class="card stat"><span class="stat-label">Your Streak</span><span id="statStreak" class="stat-value">0</span></div>
-          <div class="card stat"><span class="stat-label">Your Catches</span><span id="statCatches" class="stat-value">0</span></div>
         </div>
       </div>
-    </section>
-  </main>
+    </header>
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <span>LanternFly Quest · v0.1</span>
-      <button id="resetDemo" class="btn danger small" title="Reset demo data">Reset</button>
-    </div>
-  </footer>
+    <main>
+      <section class="hero">
+        <div class="container hero-inner">
+          <div>
+            <h1>Turn invasive pests into points.</h1>
+            <p class="lead">
+              Track, verify, and <strong>gamify</strong> the removal of spotted
+              lanternflies. Log catches, compete on the leaderboard, and earn
+              badges for real-world impact.
+            </p>
+            <a href="#report" class="btn cta">Start Reporting</a>
+          </div>
+          <!-- Updated hero-card with icons -->
+          <div class="hero-card" aria-hidden="true">
+            <div class="card stat">
+              <i class="bi bi-trophy"></i>
+              <span class="stat-label">Total Points</span>
+              <span id="statTotalPoints" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <i class="bi bi-fire"></i>
+              <span class="stat-label">Your Streak</span>
+              <span id="statStreak" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <i class="bi bi-bug"></i>
+              <span class="stat-label">Your Catches</span>
+              <span id="statCatches" class="stat-value">0</span>
+            </div>
+            <p class="lead">
+              Track, verify, and <strong>gamify</strong> the removal of spotted
+              lanternflies. Log catches, compete on the leaderboard, and earn
+              badges for real‑world impact.
+            </p>
+            <a href="#report" class="btn cta">Start Reporting</a>
+          </div>
+          <div class="hero-card" aria-hidden="true">
+            <div class="card stat">
+              <span class="stat-label">Total Points</span
+              ><span id="statTotalPoints" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <span class="stat-label">Your Streak</span
+              ><span id="statStreak" class="stat-value">0</span>
+            </div>
+            <div class="card stat">
+              <span class="stat-label">Your Catches</span
+              ><span id="statCatches" class="stat-value">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>LanternFly Quest · v0.1</span>
+        <button id="resetDemo" class="btn danger small" title="Reset demo data">
+          Reset
+        </button>
+      </div>
+    </footer>
     <!-- g_id_onload contains Google Identity Services settings -->
     <div
       id="g_id_onload"
       data-auto_prompt="false"
       data-callback="handleCredentialResponse"
-      data-client_id='598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com'
+      data-client_id="598997653463-svi76fvbe15v910t9c91eulju4vqasaa.apps.googleusercontent.com"
     ></div>
     <!-- g_id_signin places the button on a page and supports customization -->
-    <div 
+    <div
       class="g_id_signin"
       data-theme="filled_blue"
       data-text="signup_with"
     ></div>
 
-<!-- Latest compiled JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/main.js"></script>
-<!-- Google Authentication Script -->
- <script src="https://accounts.google.com/gsi/client" async></script>
- <script>
-    
+    <!-- Latest compiled JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+    <!-- Google Authentication Script -->
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <script>
       function decodeJWT(token) {
-
         let base64Url = token.split(".")[1];
         let base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
         let jsonPayload = decodeURIComponent(
@@ -124,7 +159,6 @@
       }
 
       function handleCredentialResponse(response) {
-
         console.log("Encoded JWT ID token: " + response.credential);
 
         const responsePayload = decodeJWT(response.credential);
@@ -138,5 +172,5 @@
         console.log("  Email: " + responsePayload.email);
       }
     </script>
-</body>
+  </body>
 </html>
