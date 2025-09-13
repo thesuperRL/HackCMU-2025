@@ -297,3 +297,6 @@ def migrate_csv_add_email():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+def handler(event, context):
+    return app(request.environ, lambda status, headers: (status, headers))
