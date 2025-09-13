@@ -231,7 +231,7 @@ def crop_objects(image_path, conf_thresh=0.5):
 
     return cropped_images
 # Load your trained model once at startup
-model = load_model("my_trained_model.h5")
+model = load_model("my_model.h5")
 
 @app.route("/predict", methods=["POST"])
 def predict():
